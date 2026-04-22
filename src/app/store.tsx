@@ -45,7 +45,7 @@ type SaveHuiPayload = Omit<Hui, "id" | "items"> & { id?: string };
 type Actions = {
   refresh: () => Promise<void>;
   login: (username: string, password: string) => Promise<void>;
-  register: (username: string, password: string) => Promise<void>;
+  register: (username: string, password: string, passwordConfirm?: string) => Promise<void>;
   logout: () => Promise<void>;
   setOpenRegistration: (value: boolean) => Promise<void>;
   saveUser: (payload: SaveUserPayload) => Promise<void>;
@@ -142,10 +142,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       });
       applyData(response.data);
     },
-    register: async (username, password) => {
+    register: async (username, password, passwordConfirm) => {
       const response = await request<{ user: User; data: DB }>("/api/auth/register", {
         method: "POST",
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ username, password, passwordConfirm }),
       });
       applyData(response.data);
     },

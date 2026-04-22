@@ -4,12 +4,24 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { toast } from "sonner";
+import { Eye, EyeOff } from "lucide-react";
 
 export function Login() {
   const { db, actions } = useStore();
   const [mode, setMode] = useState<"login" | "register">("login");
   const [username, setU] = useState("");
   const [password, setP] = useState("");
+  const [passwordConfirm, setPasswordConfirm] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showPasswordConfirm, setShowPasswordConfirm] = useState(false);
+
+  const switchMode = () => {
+    setMode(mode === "login" ? "register" : "login");
+    setPassword("");
+    setPasswordConfirm("");
+    setShowPassword(false);
+    setShowPasswordConfirm(false);
+  };
 
   const submit = async () => {
     if (!username || !password) { toast.error("请输入用户名与密码"); return; }
@@ -18,7 +30,9 @@ export function Login() {
         await actions.login(username, password);
       } else {
         if (!db.openRegistration) { toast.error("注册已关闭，请联系管理员"); return; }
-        await actions.register(username, password);
+        if (!passwordConfirm) { toast.error("请再次输入密码"); return; }
+        if (password !== passwordConfirm) { toast.error("两次输入的密码不一致"); return; }
+        await actions.register(username, password, passwordConfirm);
         toast.success("注册成功");
       }
     } catch (error: any) {
@@ -86,13 +100,51 @@ export function Login() {
             </div>
             <div className="space-y-2">
               <Label>密码</Label>
-              <Input type="password" value={password} onChange={e => setP(e.target.value)} onKeyDown={e => e.key === "Enter" && submit()} />
+              <div className="relative">
+                <Input
+                  className="pr-10"
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={e => setP(e.target.value)}
+                  onKeyDown={e => e.key === "Enter" && submit()}
+                />
+                <button
+                  type="button"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground"
+                  onClick={() => setShowPassword(v => !v)}
+                  aria-label={showPassword ? "隐藏密码" : "显示密码"}
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
             </div>
+            {mode === "register" && (
+              <div className="space-y-2">
+                <Label>确认密码</Label>
+                <div className="relative">
+                  <Input
+                    className="pr-10"
+                    type={showPasswordConfirm ? "text" : "password"}
+                    value={passwordConfirm}
+                    onChange={e => setPasswordConfirm(e.target.value)}
+                    onKeyDown={e => e.key === "Enter" && submit()}
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground"
+                    onClick={() => setShowPasswordConfirm(v => !v)}
+                    aria-label={showPasswordConfirm ? "隐藏确认密码" : "显示确认密码"}
+                  >
+                    {showPasswordConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+              </div>
+            )}
             <Button className="w-full bg-accent hover:bg-accent/90 text-accent-foreground" onClick={submit}>
               {mode === "login" ? "登 录" : "注 册"}
             </Button>
             {(db.openRegistration || mode === "register") && (
-              <button className="w-full text-muted-foreground hover:text-foreground transition-colors" onClick={() => setMode(mode === "login" ? "register" : "login")}>
+              <button className="w-full text-muted-foreground hover:text-foreground transition-colors" onClick={switchMode}>
                 {mode === "login" ? "没有账户？去注册" : "已有账户？去登录"}
               </button>
             )}

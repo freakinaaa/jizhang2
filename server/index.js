@@ -505,6 +505,8 @@ app.post("/api/auth/register", (req, res) => {
   if (!getOpenRegistration()) fail(403, "注册已关闭，请联系管理员");
   const username = requiredString(req.body.username, "用户名");
   const password = requiredString(req.body.password, "密码");
+  const passwordConfirm = requiredString(req.body.passwordConfirm, "确认密码");
+  if (password !== passwordConfirm) fail(400, "两次输入的密码不一致");
   const timestamp = now();
   const newUser = { id: id(), username, passwordHash: hashPassword(password) };
   try {
