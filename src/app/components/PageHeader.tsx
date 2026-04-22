@@ -16,13 +16,13 @@ export function PageHeader({ title, subtitle, right }: { title: string; subtitle
 
 export function Stat({ label, value, accent, hint }: { label: string; value: string; accent?: boolean; hint?: string }) {
   return (
-    <div className={`p-5 rounded-lg border ${accent ? "bg-sidebar text-sidebar-foreground border-sidebar-border" : "bg-card border-border"}`}>
-      <div className={`tracking-[0.2em] uppercase mb-3 ${accent ? "text-sidebar-foreground/60" : "text-muted-foreground"}`} style={{ fontSize: 12 }}>{label}</div>
+    <div className={`p-5 rounded-lg border ${accent ? "bg-accent text-accent-foreground border-accent" : "bg-card border-border"}`}>
+      <div className={`tracking-[0.2em] uppercase mb-3 ${accent ? "text-accent-foreground/70" : "text-muted-foreground"}`} style={{ fontSize: 12 }}>{label}</div>
       <div className="num num-lg" style={{ fontSize: 26, lineHeight: 1 }}>
-        <span className={accent ? "text-accent" : "text-muted-foreground"} style={{ fontSize: 14, marginRight: 4 }}>¥</span>
+        <span className={accent ? "text-accent-foreground/80" : "text-muted-foreground"} style={{ fontSize: 14, marginRight: 4 }}>¥</span>
         {value}
       </div>
-      {hint && <div className={`mt-2 ${accent ? "text-sidebar-foreground/50" : "text-muted-foreground"}`} style={{ fontSize: 14 }}>{hint}</div>}
+      {hint && <div className={`mt-2 ${accent ? "text-accent-foreground/70" : "text-muted-foreground"}`} style={{ fontSize: 14 }}>{hint}</div>}
     </div>
   );
 }
