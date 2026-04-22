@@ -19,7 +19,7 @@ function figmaAssetResolver() {
 export default defineConfig({
   server: {
     proxy: {
-      '/api': 'http://127.0.0.1:3133',
+      '/api': 'http://127.0.0.1:4133',
     },
   },
   plugins: [

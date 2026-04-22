@@ -7,8 +7,8 @@
     "build": "vite build",
     "dev": "vite",
     "quick": "bash scripts/quick-start.sh",
-    "server": "node server/index.js",
-    "start": "node server/index.js"
+    "server": "HOST=127.0.0.1 PORT=4133 DATA_DIR=./data-test node server/index.js",
+    "start": "HOST=127.0.0.1 PORT=4133 DATA_DIR=./data-test node server/index.js"
   },
   "dependencies": {
     "@emotion/react": "11.14.0",
