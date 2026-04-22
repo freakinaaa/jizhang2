@@ -135,6 +135,7 @@ function rowInstallment(row) {
   return {
     id: row.id,
     userId: row.user_id,
+    content: row.content || "",
     amount: money(row.amount_cents),
     start: row.start_date,
     end: row.end_date,
@@ -191,7 +192,7 @@ function getCookie(req, name) {
 }
 
 function migrate() {
-  const version = db.pragma("user_version", { simple: true });
+  let version = db.pragma("user_version", { simple: true });
   if (version < 1) {
     db.exec(`
       CREATE TABLE IF NOT EXISTS users (
@@ -241,6 +242,7 @@ function migrate() {
       CREATE TABLE IF NOT EXISTS installments (
         id TEXT PRIMARY KEY,
         user_id TEXT NOT NULL REFERENCES users(id),
+        content TEXT NOT NULL DEFAULT '',
         amount_cents INTEGER NOT NULL,
         start_date TEXT NOT NULL,
         end_date TEXT NOT NULL,
@@ -299,6 +301,14 @@ function migrate() {
       CREATE INDEX IF NOT EXISTS idx_sessions_expires ON sessions(expires_at);
       PRAGMA user_version = 1;
     `);
+    version = 1;
+  }
+  if (version < 2) {
+    const columns = db.prepare("PRAGMA table_info(installments)").all();
+    if (!columns.some((column) => column.name === "content")) {
+      db.exec("ALTER TABLE installments ADD COLUMN content TEXT NOT NULL DEFAULT '';");
+    }
+    db.pragma("user_version = 2");
   }
 }
 
@@ -704,6 +714,7 @@ platformRoutes("/api/repayment-platforms", "repayment_platforms");
 app.post("/api/installments", (req, res) => {
   const userId = requiredString(req.body.userId, "分期用户");
   getActiveUser(userId);
+  const content = requiredString(req.body.content, "分期内容");
   const amount = ensurePositiveAmount(req.body.amount, "分期费用");
   const start = validDate(req.body.start, "开始时间");
   const end = validDate(req.body.end, "结束时间");
@@ -711,9 +722,9 @@ app.post("/api/installments", (req, res) => {
   const platform = requiredString(req.body.platform, "分期平台");
   const timestamp = now();
   db.prepare(`
-    INSERT INTO installments (id, user_id, amount_cents, start_date, end_date, platform, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(id(), userId, amount, start, end, platform, timestamp, timestamp);
+    INSERT INTO installments (id, user_id, content, amount_cents, start_date, end_date, platform, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(id(), userId, content, amount, start, end, platform, timestamp, timestamp);
   res.status(201).json(appData(req.user));
 });
 
@@ -722,15 +733,16 @@ app.patch("/api/installments/:id", (req, res) => {
   if (!existing) fail(404, "分期不存在");
   const userId = requiredString(req.body.userId, "分期用户");
   getActiveUser(userId);
+  const content = requiredString(req.body.content, "分期内容");
   const amount = ensurePositiveAmount(req.body.amount, "分期费用");
   const start = validDate(req.body.start, "开始时间");
   const end = validDate(req.body.end, "结束时间");
   if (end < start) fail(400, "结束时间不能早于开始时间");
   const platform = requiredString(req.body.platform, "分期平台");
   db.prepare(`
-    UPDATE installments SET user_id = ?, amount_cents = ?, start_date = ?, end_date = ?, platform = ?, updated_at = ?
+    UPDATE installments SET user_id = ?, content = ?, amount_cents = ?, start_date = ?, end_date = ?, platform = ?, updated_at = ?
     WHERE id = ?
-  `).run(userId, amount, start, end, platform, now(), existing.id);
+  `).run(userId, content, amount, start, end, platform, now(), existing.id);
   res.json(appData(req.user));
 });
 

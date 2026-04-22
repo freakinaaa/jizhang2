@@ -10,7 +10,7 @@ export type Record = {
   amount: number; note?: string;
 };
 export type Installment = {
-  id: string; userId: string; amount: number; start: string; end: string; platform: string;
+  id: string; userId: string; content: string; amount: number; start: string; end: string; platform: string;
 };
 export type Platform = { id: string; name: string; isDeleted?: boolean };
 export type Repayment = {
