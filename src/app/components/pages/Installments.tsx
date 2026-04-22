@@ -21,6 +21,9 @@ export function Installments() {
   const [newPlat, setNewPlat] = useState("");
   const [editPlat, setEditPlat] = useState<string | null>(null);
   const [editPlatName, setEditPlatName] = useState("");
+  const [fUser, setFUser] = useState("all");
+  const [fPlat, setFPlat] = useState("all");
+  const [fStatus, setFStatus] = useState("all");
 
   const openNew = () => { setEdit(null); setUserId(db.users[0]?.id ?? ""); setAmount(""); setStart(""); setEnd(""); setPlatform(""); setOpen(true); };
   const openEdit = (i: Installment) => { setEdit(i); setUserId(i.userId); setAmount(String(i.amount)); setStart(i.start); setEnd(i.end); setPlatform(i.platform); setOpen(true); };
@@ -39,11 +42,54 @@ export function Installments() {
   return (
     <div>
       <PageHeader title="分期费用管理" subtitle="Installments" right={
-        <div className="flex gap-2">
+        <div className="flex items-center gap-3">
+          {(() => {
+            const m = new Date().toISOString().slice(0, 7);
+            const active = db.installments.filter(i => i.start.slice(0, 7) <= m && i.end.slice(0, 7) >= m);
+            const sum = active.reduce((s, i) => s + i.amount, 0);
+            return (
+              <div className="px-3 py-2 rounded-md bg-muted">
+                <span className="tracking-[0.2em] uppercase text-muted-foreground mr-2" style={{ fontSize: 12 }}>当月分期</span>
+                <span className="num">¥{fmtMoney(sum)}</span>
+                <span className="text-muted-foreground ml-2" style={{ fontSize: 13 }}>· {active.length}笔</span>
+              </div>
+            );
+          })()}
           <Button variant="outline" onClick={() => setCfg(true)}><Settings size={16} /> 配置平台</Button>
           <Button onClick={openNew} className="bg-accent hover:bg-accent/90 text-accent-foreground"><Plus size={16} /> 新增分期</Button>
         </div>
       } />
+      <div className="p-4 rounded-lg border border-border bg-card mb-3 grid md:grid-cols-3 gap-3">
+        <div className="space-y-1.5"><Label>分期用户</Label>
+          <Select value={fUser} onValueChange={setFUser}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">全部</SelectItem>
+              {db.users.map(u => <SelectItem key={u.id} value={u.id}>{u.username}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1.5"><Label>平台</Label>
+          <Select value={fPlat} onValueChange={setFPlat}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">全部</SelectItem>
+              {db.installmentPlatforms.map(p => <SelectItem key={p.id} value={p.name}>{p.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1.5"><Label>状态</Label>
+          <Select value={fStatus} onValueChange={setFStatus}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">全部</SelectItem>
+              <SelectItem value="active">进行中</SelectItem>
+              <SelectItem value="ended">已结束</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
       <div className="rounded-lg border border-border bg-card">
         <Table>
           <TableHeader><TableRow>
@@ -51,7 +97,18 @@ export function Installments() {
             <TableHead>开始</TableHead><TableHead>结束</TableHead><TableHead>平台</TableHead><TableHead>状态</TableHead><TableHead className="text-right">操作</TableHead>
           </TableRow></TableHeader>
           <TableBody>
-            {[...db.installments].sort((a, b) => b.start.localeCompare(a.start)).map(i => {
+            {(() => {
+              const todayS = new Date().toISOString().slice(0, 10);
+              const filtered = db.installments.filter(i => {
+                if (fUser !== "all" && i.userId !== fUser) return false;
+                if (fPlat !== "all" && i.platform !== fPlat) return false;
+                const act = i.start <= todayS && i.end >= todayS;
+                if (fStatus === "active" && !act) return false;
+                if (fStatus === "ended" && act) return false;
+                return true;
+              }).sort((a, b) => b.start.localeCompare(a.start));
+              if (filtered.length === 0) return <TableRow><TableCell colSpan={7} className="text-center py-10 text-muted-foreground">无记录</TableCell></TableRow>;
+              return filtered.map(i => {
               const today = new Date().toISOString().slice(0, 10);
               const active = i.start <= today && i.end >= today;
               return (
@@ -73,8 +130,8 @@ export function Installments() {
                 </TableCell>
               </TableRow>
               );
-            })}
-            {db.installments.length === 0 && <TableRow><TableCell colSpan={7} className="text-center py-10 text-muted-foreground">暂无分期</TableCell></TableRow>}
+            });
+            })()}
           </TableBody>
         </Table>
       </div>

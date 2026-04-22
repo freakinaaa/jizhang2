@@ -61,8 +61,9 @@ export function Repayments() {
           <TableBody>
             {[...db.repayments].sort((a, b) => b.month.localeCompare(a.month)).map(r => {
               const tot = r.items.reduce((s, i) => s + i.amount, 0);
+              const isCur = r.month === getMonth();
               return (
-                <TableRow key={r.id}>
+                <TableRow key={r.id} className={isCur ? "" : "opacity-50"}>
                   <TableCell className="mono">{r.month}</TableCell>
                   <TableCell className="text-right num">¥{fmtMoney(tot)}</TableCell>
                   <TableCell>{db.users.find(u => u.id === r.userId)?.username}</TableCell>
