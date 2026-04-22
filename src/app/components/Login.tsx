@@ -82,11 +82,11 @@ export function Login() {
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>用户名</Label>
-              <Input value={username} onChange={e => setU(e.target.value)} placeholder="admin" autoFocus />
+              <Input value={username} onChange={e => setU(e.target.value)} autoFocus />
             </div>
             <div className="space-y-2">
               <Label>密码</Label>
-              <Input type="password" value={password} onChange={e => setP(e.target.value)} placeholder="••••••" onKeyDown={e => e.key === "Enter" && submit()} />
+              <Input type="password" value={password} onChange={e => setP(e.target.value)} onKeyDown={e => e.key === "Enter" && submit()} />
             </div>
             <Button className="w-full bg-accent hover:bg-accent/90 text-accent-foreground" onClick={submit}>
               {mode === "login" ? "登 录" : "注 册"}
@@ -99,9 +99,6 @@ export function Login() {
             {!db.openRegistration && mode === "login" && (
               <div className="text-center text-muted-foreground" style={{ fontSize: 13 }}>注册已关闭，如需账户请联系管理员</div>
             )}
-          </div>
-          <div className="pt-6 border-t border-border text-muted-foreground" style={{ fontSize: 14 }}>
-            测试账户：<span className="mono">admin / admin</span>
           </div>
         </div>
       </div>

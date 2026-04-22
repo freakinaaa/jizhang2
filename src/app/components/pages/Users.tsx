@@ -12,6 +12,7 @@ import { toast } from "sonner";
 
 export function Users() {
   const { db, setDB, currentUser } = useStore();
+  const isAdmin = !!currentUser?.isAdmin;
   const [open, setOpen] = useState(false);
   const [edit, setEdit] = useState<User | null>(null);
   const [username, setU] = useState(""); const [password, setP] = useState("");
@@ -22,6 +23,8 @@ export function Users() {
 
   const submit = () => {
     if (!username || !password) return toast.error("请填写完整");
+    if (!edit && !isAdmin) return toast.error("仅管理员可新增成员");
+    if (edit && !isAdmin && edit.id !== currentUser?.id) return toast.error("无权限");
     if (edit) setDB(d => ({ ...d, users: d.users.map(u => u.id === edit.id ? { ...u, username, password } : u) }));
     else setDB(d => ({ ...d, users: [...d.users, { id: genId(), username, password }] }));
     setOpen(false); toast.success("已保存");
@@ -30,16 +33,20 @@ export function Users() {
   return (
     <div>
       <PageHeader title="用户管理" subtitle="Users" right={
-        <Button onClick={openNew} className="bg-accent hover:bg-accent/90 text-accent-foreground"><Plus size={16} /> 新增成员</Button>
+        isAdmin
+          ? <Button onClick={openNew} className="bg-accent hover:bg-accent/90 text-accent-foreground"><Plus size={16} /> 新增成员</Button>
+          : <span className="text-muted-foreground" style={{ fontSize: 13 }}>仅管理员可新增</span>
       } />
       <div className="p-4 rounded-lg border border-border bg-card mb-3 flex items-center justify-between">
         <div>
           <div style={{ fontSize: 15 }}>开放注册</div>
           <div className="text-muted-foreground" style={{ fontSize: 13 }}>
-            {db.openRegistration ? "当前允许新用户在登录页自助注册" : "仅管理员可在此页新增成员"}
+            {isAdmin
+              ? (db.openRegistration ? "当前允许新用户在登录页自助注册" : "仅管理员可在此页新增成员")
+              : "仅管理员可修改此设置"}
           </div>
         </div>
-        <Switch checked={!!db.openRegistration} onCheckedChange={v => setDB(d => ({ ...d, openRegistration: v }))} />
+        <Switch checked={!!db.openRegistration} disabled={!isAdmin} onCheckedChange={v => setDB(d => ({ ...d, openRegistration: v }))} />
       </div>
       <div className="rounded-lg border border-border bg-card">
         <Table>
@@ -48,7 +55,8 @@ export function Users() {
           </TableRow></TableHeader>
           <TableBody>
             {db.users.map(u => {
-              const canDelete = !u.isAdmin;
+              const canDelete = isAdmin && !u.isAdmin;
+              const canEdit = isAdmin || u.id === currentUser?.id;
               return (
                 <TableRow key={u.id}>
                   <TableCell className="flex items-center gap-2">
@@ -67,7 +75,7 @@ export function Users() {
                       : <span className="text-muted-foreground">成员</span>}
                   </TableCell>
                   <TableCell className="text-right">
-                    <button className="p-1.5 hover:text-accent" onClick={() => openEdit(u)}><Pencil size={14} /></button>
+                    <button className={`p-1.5 ${canEdit ? "hover:text-accent" : "opacity-30 cursor-not-allowed"}`} disabled={!canEdit} onClick={() => { if (canEdit) openEdit(u); }}><Pencil size={14} /></button>
                     <button className={`p-1.5 ${canDelete ? "hover:text-destructive" : "opacity-30 cursor-not-allowed"}`}
                       disabled={!canDelete}
                       onClick={() => { if (!canDelete) return; if (confirm("删除？")) setDB(d => ({ ...d, users: d.users.filter(x => x.id !== u.id) })); }}>
