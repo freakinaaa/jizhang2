@@ -2,12 +2,14 @@ import { useMemo, useState } from "react";
 import { useStore, monthOf, fmtMoney, listMonths, MAIN_CATEGORIES } from "../../store";
 import { PageHeader, Stat } from "../PageHeader";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ui/table";
 
 export function Dashboard() {
   const { db } = useStore();
   const months = listMonths(12);
   const [month, setMonth] = useState(months[0]);
+  const [moreOpen, setMoreOpen] = useState(false);
 
   const data = useMemo(() => {
     const inMonth = db.records.filter(r => monthOf(r.date) === month);
@@ -25,7 +27,7 @@ export function Dashboard() {
     const ranking = Array.from(bySub.entries()).map(([id, v]) => {
       const c = db.categories.find(c => c.id === id);
       return { name: c?.name ?? "未知", main: c?.main ?? "", value: v };
-    }).sort((a, b) => b.value - a.value).slice(0, 6);
+    }).sort((a, b) => b.value - a.value);
     const recent = [...inMonth].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 8);
     return { expense, budget, installs, repay, trend, ranking, recent };
   }, [db, month]);
@@ -76,11 +78,11 @@ export function Dashboard() {
         <div className="p-5 rounded-lg border border-border bg-card">
           <div className="flex items-center justify-between mb-4">
             <h3>分类支出排行</h3>
-            <span className="tracking-[0.2em] uppercase text-muted-foreground" style={{ fontSize: 12 }}>Top</span>
+            <button onClick={() => setMoreOpen(true)} className="text-accent hover:underline" style={{ fontSize: 13 }}>更多 →</button>
           </div>
           <div className="space-y-3">
             {data.ranking.length === 0 && <div className="text-muted-foreground py-8 text-center">暂无数据</div>}
-            {data.ranking.map((r, i) => {
+            {data.ranking.slice(0, 6).map((r, i) => {
               const color = MAIN_CATEGORIES.indexOf(r.main as any) === 0 ? "var(--chart-1)" : MAIN_CATEGORIES.indexOf(r.main as any) === 1 ? "var(--chart-2)" : "var(--chart-3)";
               return (
                 <div key={i}>
@@ -99,6 +101,35 @@ export function Dashboard() {
               );
             })}
           </div>
+
+          <Dialog open={moreOpen} onOpenChange={setMoreOpen}>
+            <DialogContent className="max-w-lg">
+              <DialogHeader>
+                <DialogTitle>分类支出排行 · <span className="mono text-muted-foreground" style={{ fontSize: 14 }}>{month}</span></DialogTitle>
+              </DialogHeader>
+              <div className="space-y-3 pt-2 max-h-[60vh] overflow-y-auto pr-1">
+                {data.ranking.map((r, i) => {
+                  const color = MAIN_CATEGORIES.indexOf(r.main as any) === 0 ? "var(--chart-1)" : MAIN_CATEGORIES.indexOf(r.main as any) === 1 ? "var(--chart-2)" : "var(--chart-3)";
+                  return (
+                    <div key={i}>
+                      <div className="flex items-baseline justify-between mb-1">
+                        <div className="flex items-baseline gap-2">
+                          <span className="num text-muted-foreground" style={{ fontSize: 13 }}>{String(i + 1).padStart(2, "0")}</span>
+                          <span>{r.name}</span>
+                          <span className="text-muted-foreground" style={{ fontSize: 13 }}>{r.main}</span>
+                        </div>
+                        <span className="num">¥{fmtMoney(r.value)}</span>
+                      </div>
+                      <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                        <div className="h-full transition-all" style={{ width: `${r.value / max * 100}%`, background: color }} />
+                      </div>
+                    </div>
+                  );
+                })}
+                {data.ranking.length === 0 && <div className="text-muted-foreground py-8 text-center">暂无数据</div>}
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
 
