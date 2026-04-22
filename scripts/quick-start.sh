@@ -9,8 +9,8 @@ if [ ! -d "$ROOT_DIR/node_modules" ]; then
   exit 1
 fi
 
-if command -v lsof >/dev/null 2>&1 && lsof -tiTCP:3000 -sTCP:LISTEN >/dev/null 2>&1; then
-  echo "Port 3000 is already in use. Please stop the running service first."
+if command -v lsof >/dev/null 2>&1 && lsof -tiTCP:3133 -sTCP:LISTEN >/dev/null 2>&1; then
+  echo "Port 3133 is already in use. Please stop the running service first."
   exit 1
 fi
 
@@ -20,9 +20,9 @@ echo "Building frontend..."
 npm run build
 
 echo
-echo "Starting integrated app on http://127.0.0.1:3000"
+echo "Starting integrated app on http://127.0.0.1:3133"
 echo "Default login: admin / admin"
 echo "Press Ctrl+C to stop."
 echo
 
-HOST=127.0.0.1 PORT=3000 npm start
+HOST=127.0.0.1 PORT=3133 npm start

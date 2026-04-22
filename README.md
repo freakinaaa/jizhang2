@@ -2,200 +2,193 @@
 
 [![Repository](https://img.shields.io/badge/GitHub-freakinaaa%2Fjizhang2-181717?logo=github)](https://github.com/freakinaaa/jizhang2)
 
-一个基于 `React + Vite + Node.js + Express + SQLite` 的一体化记账系统，适合个人、家庭或小团队进行日常记账，也适合部署在 NAS 的 Docker 环境中长期使用。
+这是一个可以直接用 Docker 部署的记账系统，适合个人、家庭或放在 NAS 上长期使用。
 
-前端和后端打包为同一个服务，对外只暴露一个端口；SQLite 数据库单独存放在挂载目录中，升级系统镜像不会影响已有数据。
+你不需要安装额外数据库，这个项目内部直接使用 `SQLite`，数据会保存在你自己的 `data` 目录里。
 
-## 项目介绍
+## 最简单的部署方式
 
-- 前端：`React + Vite`
-- 后端：`Node.js + Express`
-- 数据库：`SQLite`
-- 部署方式：本地运行、Docker 镜像、`docker compose`
-- 数据持久化：默认保存到 `./data/app.db`
+如果你会用 Docker，那么只需要准备一个 `docker-compose.yml` 文件。
 
-系统首次启动会自动初始化数据库，并创建默认管理员：
+新建一个空文件夹，比如：
+
+```bash
+mkdir jizhang
+cd jizhang
+```
+
+然后新建文件 `docker-compose.yml`，把下面内容完整复制进去：
+
+```yaml
+services:
+  jizhang:
+    container_name: jizhang
+    hostname: jizhang
+    image: ghcr.io/freakinaaa/jizhang2:latest
+    environment:
+      - NODE_ENV=production
+      - DATA_DIR=/data
+      - PORT=3133
+      - HOST=0.0.0.0
+    ports:
+      - "3133:3133"
+    volumes:
+      - "./data:/data"
+    restart: unless-stopped
+```
+
+保存后，在这个目录里执行：
+
+```bash
+docker compose up -d
+```
+
+启动成功后，浏览器访问：
+
+```text
+http://你的服务器IP:3133
+```
+
+如果你是在本机运行，也可以直接访问：
+
+```text
+http://127.0.0.1:3133
+```
+
+## 默认账号
+
+系统第一次启动时会自动创建管理员账号：
 
 - 用户名：`admin`
 - 密码：`admin`
 
-首次登录后建议立即修改默认密码。
+第一次登录后建议马上修改密码。
 
-## 功能概览
+## 数据保存在哪里
 
-- 注册 / 登录
-- 快速记账
-- 仪表盘
-- 记账记录
-- 统计分析
-- 分期费用管理
-- 还款管理
-- 预算管理
-- 分类管理
-- 会钱管理
-- 用户管理
-- 开放注册开关
-- SQLite 数据备份下载
+上面的配置里这一行：
 
-## 从 GitHub 安装
-
-先克隆发布仓库：
-
-```bash
-git clone https://github.com/freakinaaa/jizhang2.git
-cd jizhang2
+```yaml
+- "./data:/data"
 ```
 
-后续可根据使用场景选择本地运行或 Docker 部署。
+意思是：
 
-## 本地一体化预览
+- 你当前目录里的 `data` 文件夹
+- 会映射到容器里的 `/data`
 
-适合快速体验和本机验收，只会启动一个 `3000` 端口服务。
-
-```bash
-npm install
-npm run quick
-```
-
-启动后访问：
-
-```text
-http://127.0.0.1:3000
-```
-
-说明：
-
-- `npm run quick` 会先构建前端，再启动 Node 一体化服务。
-- 前端页面和后端 API 都通过同一个 `3000` 端口访问。
-- 停止服务时，在当前终端按 `Ctrl+C`。
-
-## Docker / NAS 部署
-
-推荐在 NAS 或长期运行环境中使用 `docker compose`。
-
-确认 Docker 可用：
-
-```bash
-docker --version
-docker compose version
-```
-
-从 GitHub 拉取代码后启动：
-
-```bash
-git clone https://github.com/freakinaaa/jizhang2.git
-cd jizhang2
-docker compose up -d --build
-```
-
-启动后访问：
-
-```text
-http://127.0.0.1:3000
-```
-
-默认配置：
-
-- 镜像名：`jizhang:latest`
-- 容器名：`jizhang`
-- 端口映射：`3000:3000`
-- 数据挂载：`./data:/data`
-- 容器内数据库：`/data/app.db`
-
-常用 Docker 命令：
-
-```bash
-docker compose ps
-docker compose logs -f
-docker compose down
-```
-
-只要保留宿主机上的 `./data/app.db`，重新构建或升级容器都不会丢失数据。
-
-## 手动构建 Docker 镜像
-
-如果不使用 `docker compose`，也可以手动构建和运行：
-
-```bash
-docker build -t jizhang:latest .
-docker run -d \
-  --name jizhang \
-  -p 3000:3000 \
-  -v $(pwd)/data:/data \
-  --restart unless-stopped \
-  jizhang:latest
-```
-
-## 本地开发模式
-
-适合修改代码时使用，前端支持热更新。
-
-```bash
-npm install
-npm run server
-```
-
-新开一个终端：
-
-```bash
-npm run dev
-```
-
-访问前端开发服务器：
-
-```text
-http://127.0.0.1:5173
-```
-
-说明：
-
-- 开发模式下，Vite 会将 `/api` 请求代理到本地 `3000` 端口。
-- 生产部署不需要 `5173`，只需要 `3000`。
-
-## 从 GitHub 更新
-
-本地或 NAS 上更新代码：
-
-```bash
-git pull origin main
-```
-
-如果使用 Docker 部署，更新后重新构建并启动：
-
-```bash
-docker compose up -d --build
-```
-
-数据目录 `./data` 会继续保留，不会因为更新代码或重建容器而被删除。
-
-## 数据与备份
-
-- 本地默认数据库：`./data/app.db`
-- Docker 容器内数据库：`/data/app.db`
-- 管理员可在“用户管理”页面下载当前 SQLite 数据库备份
-
-手动备份时，直接备份以下文件即可：
+数据库文件会保存在：
 
 ```text
 ./data/app.db
 ```
 
-恢复时，停止服务后替换该文件，再重新启动服务。
+所以只要你的 `data` 文件夹还在：
+
+- 删除容器没关系
+- 重建容器没关系
+- 更新镜像没关系
+
+数据都不会丢。
 
 ## 常用命令
 
+### 启动
+
 ```bash
-# 本地一体化预览
-npm install
-npm run quick
+docker compose up -d
+```
 
-# 本地开发
-npm run server
-npm run dev
+### 查看运行状态
 
-# Docker 部署
-docker compose up -d --build
+```bash
+docker compose ps
+```
 
-# Docker 停止
+### 查看日志
+
+```bash
+docker compose logs -f
+```
+
+### 停止服务
+
+```bash
 docker compose down
+```
+
+### 更新到最新镜像
+
+```bash
+docker compose pull
+docker compose up -d
+```
+
+如果你希望强制重建容器，也可以用：
+
+```bash
+docker compose up -d --force-recreate
+```
+
+## 备份方法
+
+最简单的备份方式，就是备份这个文件：
+
+```text
+./data/app.db
+```
+
+如果想更稳一点，也可以直接备份整个 `data` 目录。
+
+恢复数据时：
+
+1. 先停止服务
+2. 用备份文件替换 `./data/app.db`
+3. 再重新启动容器
+
+对应命令：
+
+```bash
+docker compose down
+docker compose up -d
+```
+
+## 常见问题
+
+### 1. 需要额外装 MySQL 或 PostgreSQL 吗？
+
+不需要。
+
+这个项目直接使用 `SQLite`，数据库文件就是 `./data/app.db`。
+
+### 2. 更新后数据会丢吗？
+
+不会，只要你没有删掉 `data` 目录。
+
+### 3. 可以部署到 NAS 吗？
+
+可以，这个项目就是按 Docker / NAS 场景整理的。
+
+### 4. 为什么端口是 `3133`？
+
+因为 `3133` 相对更不容易和其他常见服务冲突。
+
+### 5. 如果我想改端口怎么办？
+
+改这里这一行左边的数字就可以：
+
+```yaml
+- "3133:3133"
+```
+
+比如你想改成 `8080`，可以写成：
+
+```yaml
+- "8080:3133"
+```
+
+这样浏览器就访问：
+
+```text
+http://你的服务器IP:8080
 ```
