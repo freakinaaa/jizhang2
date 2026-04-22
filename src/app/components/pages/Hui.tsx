@@ -6,7 +6,7 @@ import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ui/table";
-import { Pencil, Trash2, Plus } from "lucide-react";
+import { Check, Pencil, Trash2, Plus } from "lucide-react";
 import { toast } from "sonner";
 
 export function Hui() {
@@ -14,6 +14,8 @@ export function Hui() {
   const [active, setActive] = useState<string | null>(db.huis[0]?.id ?? null);
   const [open, setOpen] = useState(false);
   const [edit, setEdit] = useState<H | null>(null);
+  const [editingInterestMonth, setEditingInterestMonth] = useState<string | null>(null);
+  const [interestDraft, setInterestDraft] = useState("");
   const [name, setName] = useState(""); const [start, setStart] = useState(""); const [end, setEnd] = useState(""); const [principal, setPr] = useState("");
 
   const current = db.huis.find(h => h.id === active) ?? db.huis[0] ?? null;
@@ -22,6 +24,11 @@ export function Hui() {
     if (!db.huis.length) { setActive(null); return; }
     if (!current) setActive(db.huis[0].id);
   }, [current, db.huis]);
+
+  useEffect(() => {
+    setEditingInterestMonth(null);
+    setInterestDraft("");
+  }, [current?.id]);
 
   const openNew = () => { setEdit(null); setName(""); setStart(""); setEnd(""); setPr(""); setOpen(true); };
   const openEdit = () => { if (!current) return; setEdit(current); setName(current.name); setStart(current.start); setEnd(current.end); setPr(String(current.principal)); setOpen(true); };
@@ -46,10 +53,23 @@ export function Hui() {
     }
   };
 
-  const updateInterest = async (month: string, v: string) => {
+  const startEditInterest = (month: string, interest: number) => {
+    setEditingInterestMonth(month);
+    setInterestDraft(String(interest));
+  };
+
+  const saveInterest = async (month: string) => {
     if (!current) return;
+    const interest = Number(interestDraft);
+    if (!Number.isFinite(interest) || interest < 0) {
+      toast.error("请输入正确的利息");
+      return;
+    }
     try {
-      await actions.updateHuiInterest(current.id, month, +v || 0);
+      await actions.updateHuiInterest(current.id, month, interest);
+      setEditingInterestMonth(null);
+      setInterestDraft("");
+      toast.success("利息已更新");
     } catch (error: any) {
       toast.error(error.message || "更新失败");
     }
@@ -102,7 +122,31 @@ export function Hui() {
                     <TableCell className="mono">{i.month}</TableCell>
                     <TableCell className="text-right num">¥{fmtMoney(i.principal)}</TableCell>
                     <TableCell className="text-right">
-                      <Input type="number" step="0.01" className="num text-right w-32 ml-auto" value={i.interest} onChange={e => updateInterest(i.month, e.target.value)} />
+                      {editingInterestMonth === i.month ? (
+                        <div className="flex justify-end items-center gap-2">
+                          <Input
+                            type="number"
+                            step="0.01"
+                            className="num text-right w-28"
+                            value={interestDraft}
+                            onChange={e => setInterestDraft(e.target.value)}
+                            onKeyDown={e => {
+                              if (e.key === "Enter") saveInterest(i.month);
+                            }}
+                            autoFocus
+                          />
+                          <Button size="icon" variant="outline" onClick={() => saveInterest(i.month)} aria-label="保存利息">
+                            <Check size={14} />
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="flex justify-end items-center gap-2">
+                          <span className="num">¥{fmtMoney(i.interest)}</span>
+                          <Button size="icon" variant="ghost" onClick={() => startEditInterest(i.month, i.interest)} aria-label="编辑利息">
+                            <Pencil size={14} />
+                          </Button>
+                        </div>
+                      )}
                     </TableCell>
                     <TableCell className="text-right num">¥{fmtMoney(i.principal + i.interest)}</TableCell>
                   </TableRow>

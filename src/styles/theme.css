@@ -192,6 +192,15 @@
   label { font-weight: 500; font-size: 0.8125rem; line-height: 1.4; letter-spacing: 0.02em; color: var(--muted-foreground); }
   button { font-weight: 500; font-size: 0.875rem; line-height: 1.4; letter-spacing: 0.015em; }
   input, textarea, select { font-weight: 400; font-size: 0.875rem; line-height: 1.5; letter-spacing: 0.005em; }
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input[type="number"] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+  }
   p { line-height: 1.65; }
 
   .num {
