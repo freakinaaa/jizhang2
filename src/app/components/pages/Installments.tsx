@@ -41,23 +41,33 @@ export function Installments() {
         <Table>
           <TableHeader><TableRow>
             <TableHead>分期用户</TableHead><TableHead className="text-right">分期费用</TableHead>
-            <TableHead>开始</TableHead><TableHead>结束</TableHead><TableHead>平台</TableHead><TableHead className="text-right">操作</TableHead>
+            <TableHead>开始</TableHead><TableHead>结束</TableHead><TableHead>平台</TableHead><TableHead>状态</TableHead><TableHead className="text-right">操作</TableHead>
           </TableRow></TableHeader>
           <TableBody>
-            {db.installments.map(i => (
-              <TableRow key={i.id}>
+            {[...db.installments].sort((a, b) => b.start.localeCompare(a.start)).map(i => {
+              const today = new Date().toISOString().slice(0, 10);
+              const active = i.start <= today && i.end >= today;
+              return (
+              <TableRow key={i.id} className={active ? "" : "opacity-50"}>
                 <TableCell>{db.users.find(u => u.id === i.userId)?.username}</TableCell>
                 <TableCell className="text-right num">¥{fmtMoney(i.amount)}</TableCell>
                 <TableCell className="mono">{i.start}</TableCell>
                 <TableCell className="mono">{i.end}</TableCell>
                 <TableCell>{i.platform}</TableCell>
+                <TableCell>
+                  <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full tracking-[0.1em] ${active ? "bg-accent/10 text-accent" : "bg-muted text-muted-foreground"}`} style={{ fontSize: 12 }}>
+                    <span className={`h-1.5 w-1.5 rounded-full ${active ? "bg-accent" : "bg-muted-foreground/50"}`} />
+                    {active ? "进行中" : "已结束"}
+                  </span>
+                </TableCell>
                 <TableCell className="text-right">
                   <button className="p-1.5 hover:text-accent" onClick={() => openEdit(i)}><Pencil size={14} /></button>
                   <button className="p-1.5 hover:text-destructive" onClick={() => { if (confirm("删除？")) setDB(d => ({ ...d, installments: d.installments.filter(x => x.id !== i.id) })); }}><Trash2 size={14} /></button>
                 </TableCell>
               </TableRow>
-            ))}
-            {db.installments.length === 0 && <TableRow><TableCell colSpan={6} className="text-center py-10 text-muted-foreground">暂无分期</TableCell></TableRow>}
+              );
+            })}
+            {db.installments.length === 0 && <TableRow><TableCell colSpan={7} className="text-center py-10 text-muted-foreground">暂无分期</TableCell></TableRow>}
           </TableBody>
         </Table>
       </div>

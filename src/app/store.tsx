@@ -77,15 +77,30 @@ const seed = (): DB => {
     categories: cats,
     records,
     installments: [
-      { id: uid(), userId: adminId, amount: 500, start: month + "-01", end: new Date(new Date().setMonth(new Date().getMonth() + 6)).toISOString().slice(0, 10), platform: "花呗" },
+      { id: uid(), userId: adminId, amount: 899, start: month + "-01", end: new Date(new Date().setMonth(new Date().getMonth() + 6)).toISOString().slice(0, 10), platform: "花呗" },
+      { id: uid(), userId: adminId, amount: 1580, start: new Date(new Date().setMonth(new Date().getMonth() - 2)).toISOString().slice(0, 10), end: new Date(new Date().setMonth(new Date().getMonth() + 10)).toISOString().slice(0, 10), platform: "招行信用卡" },
+      { id: uid(), userId: u2, amount: 399, start: new Date(new Date().setMonth(new Date().getMonth() - 5)).toISOString().slice(0, 10), end: new Date(new Date().setMonth(new Date().getMonth() + 3)).toISOString().slice(0, 10), platform: "京东白条" },
+      { id: uid(), userId: u2, amount: 2200, start: "2025-06-15", end: "2026-06-15", platform: "中信信用卡" },
+      { id: uid(), userId: adminId, amount: 650, start: "2025-01-01", end: "2025-12-01", platform: "花呗" },
+      { id: uid(), userId: u2, amount: 1200, start: "2024-10-10", end: "2025-10-10", platform: "美团月付" },
+      { id: uid(), userId: adminId, amount: 480, start: "2025-03-20", end: "2026-03-20", platform: "白条" },
+      { id: uid(), userId: adminId, amount: 3500, start: new Date(new Date().setMonth(new Date().getMonth() - 1)).toISOString().slice(0, 10), end: new Date(new Date().setMonth(new Date().getMonth() + 23)).toISOString().slice(0, 10), platform: "工行分期" },
     ],
     platforms,
     repayments: [
       { id: uid(), month, userId: adminId, items: platforms.map(p => ({ platformId: p.id, amount: Math.round(Math.random() * 500 + 100) })) },
     ],
-    budgets: [
-      { month, total: 8000, ganfan: 3000, xiaosa: 3000, other: 2000 },
-    ],
+    budgets: (() => {
+      const out: { month: string; total: number; ganfan: number; xiaosa: number; other: number }[] = [];
+      const now = new Date();
+      for (let i = 0; i < 6; i++) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const mm = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+        const base = 7500 + Math.round(Math.random() * 1500);
+        out.push({ month: mm, total: base, ganfan: Math.round(base * 0.4), xiaosa: Math.round(base * 0.35), other: Math.round(base * 0.25) });
+      }
+      return out;
+    })(),
     huis: [
       { id: uid(), name: "2026年会", start: "2026-01-01", end: "2026-12-01", principal: 1000, items: Array.from({ length: 12 }, (_, i) => ({ month: `2026-${String(i + 1).padStart(2, "0")}`, principal: 1000, interest: 20 })) },
     ],
@@ -93,7 +108,7 @@ const seed = (): DB => {
   };
 };
 
-const KEY = "accounting-app-v1";
+const KEY = "accounting-app-v3";
 
 function load(): DB {
   try {

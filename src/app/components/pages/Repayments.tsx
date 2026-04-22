@@ -59,7 +59,7 @@ export function Repayments() {
             <TableHead>还款月份</TableHead><TableHead className="text-right">总费用</TableHead><TableHead>还款人</TableHead><TableHead>明细</TableHead><TableHead className="text-right">操作</TableHead>
           </TableRow></TableHeader>
           <TableBody>
-            {db.repayments.map(r => {
+            {[...db.repayments].sort((a, b) => b.month.localeCompare(a.month)).map(r => {
               const tot = r.items.reduce((s, i) => s + i.amount, 0);
               return (
                 <TableRow key={r.id}>

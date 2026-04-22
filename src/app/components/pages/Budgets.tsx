@@ -54,7 +54,7 @@ export function Budgets() {
           </TableRow></TableHeader>
           <TableBody>
             {[...db.budgets].sort((a, b) => b.month.localeCompare(a.month)).map(b => (
-              <TableRow key={b.month}>
+              <TableRow key={b.month} className={b.month === month ? "" : "opacity-50"}>
                 <TableCell className="mono">{b.month}</TableCell>
                 <TableCell className="text-right num">¥{fmtMoney(b.total)}</TableCell>
                 <TableCell className="text-right num">¥{fmtMoney(b.ganfan)}</TableCell>
