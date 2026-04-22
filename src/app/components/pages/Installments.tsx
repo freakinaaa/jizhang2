@@ -15,6 +15,7 @@ export function Installments() {
   const [open, setOpen] = useState(false);
   const [edit, setEdit] = useState<Installment | null>(null);
   const [userId, setUserId] = useState(""); const [amount, setAmount] = useState("");
+  const [content, setContent] = useState("");
   const [start, setStart] = useState(""); const [end, setEnd] = useState("");
   const [platform, setPlatform] = useState("");
   const [cfg, setCfg] = useState(false);
@@ -25,14 +26,14 @@ export function Installments() {
   const [fPlat, setFPlat] = useState("all");
   const [fStatus, setFStatus] = useState("all");
 
-  const openNew = () => { setEdit(null); setUserId(db.users[0]?.id ?? ""); setAmount(""); setStart(""); setEnd(""); setPlatform(""); setOpen(true); };
-  const openEdit = (i: Installment) => { setEdit(i); setUserId(i.userId); setAmount(String(i.amount)); setStart(i.start); setEnd(i.end); setPlatform(i.platform); setOpen(true); };
+  const openNew = () => { setEdit(null); setUserId(db.users[0]?.id ?? ""); setContent(""); setAmount(""); setStart(""); setEnd(""); setPlatform(""); setOpen(true); };
+  const openEdit = (i: Installment) => { setEdit(i); setUserId(i.userId); setContent(i.content); setAmount(String(i.amount)); setStart(i.start); setEnd(i.end); setPlatform(i.platform); setOpen(true); };
 
   const submit = async () => {
     const amt = parseFloat(amount);
-    if (!userId || !amt || !start || !end || !platform) return toast.error("请完整填写");
+    if (!userId || !content.trim() || !amt || !start || !end || !platform) return toast.error("请完整填写");
     try {
-      await actions.saveInstallment({ id: edit?.id, userId, amount: amt, start, end, platform });
+      await actions.saveInstallment({ id: edit?.id, userId, content: content.trim(), amount: amt, start, end, platform });
       setOpen(false); toast.success("已保存");
     } catch (error: any) {
       toast.error(error.message || "保存失败");
@@ -93,7 +94,7 @@ export function Installments() {
       <div className="rounded-lg border border-border bg-card">
         <Table>
           <TableHeader><TableRow>
-            <TableHead>分期用户</TableHead><TableHead className="text-right">分期费用</TableHead>
+            <TableHead>分期用户</TableHead><TableHead>分期内容</TableHead><TableHead className="text-right">分期费用</TableHead>
             <TableHead>开始</TableHead><TableHead>结束</TableHead><TableHead>平台</TableHead><TableHead>状态</TableHead><TableHead className="text-right">操作</TableHead>
           </TableRow></TableHeader>
           <TableBody>
@@ -107,13 +108,14 @@ export function Installments() {
                 if (fStatus === "ended" && act) return false;
                 return true;
               }).sort((a, b) => b.start.localeCompare(a.start));
-              if (filtered.length === 0) return <TableRow><TableCell colSpan={7} className="text-center py-10 text-muted-foreground">无记录</TableCell></TableRow>;
+              if (filtered.length === 0) return <TableRow><TableCell colSpan={8} className="text-center py-10 text-muted-foreground">无记录</TableCell></TableRow>;
               return filtered.map(i => {
               const today = new Date().toISOString().slice(0, 10);
               const active = i.start <= today && i.end >= today;
               return (
               <TableRow key={i.id} className={active ? "" : "opacity-50"}>
                 <TableCell>{db.users.find(u => u.id === i.userId)?.username}</TableCell>
+                <TableCell className="max-w-56">{i.content}</TableCell>
                 <TableCell className="text-right num">¥{fmtMoney(i.amount)}</TableCell>
                 <TableCell className="mono">{i.start}</TableCell>
                 <TableCell className="mono">{i.end}</TableCell>
@@ -150,6 +152,7 @@ export function Installments() {
                 <SelectContent>{db.users.filter(u => !u.isDeleted).map(u => <SelectItem key={u.id} value={u.id}>{u.username}</SelectItem>)}</SelectContent>
               </Select>
             </div>
+            <div className="space-y-2"><Label>分期内容</Label><Input value={content} onChange={e => setContent(e.target.value)} placeholder="例如：iPhone 16 Pro / 电脑 / 旅游套餐" /></div>
             <div className="space-y-2"><Label>分期费用（每月）</Label><Input type="number" value={amount} onChange={e => setAmount(e.target.value)} /></div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2"><Label>开始时间</Label><Input type="date" value={start} onChange={e => setStart(e.target.value)} /></div>
