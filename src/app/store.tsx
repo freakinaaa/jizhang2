@@ -34,7 +34,7 @@ export type DB = {
   currentUserId: string | null;
 };
 
-type SaveUserPayload = { id?: string; username: string; password?: string };
+type SaveUserPayload = { id?: string; username: string; password?: string; passwordConfirm?: string };
 type SaveRecordPayload = Omit<Record, "id"> & { id?: string };
 type SaveCategoryPayload = Omit<SubCategory, "id" | "isDeleted"> & { id?: string };
 type SavePlatformPayload = { id?: string; name: string };

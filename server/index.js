@@ -542,6 +542,8 @@ app.patch("/api/settings/open-registration", requireAdmin, (req, res) => {
 app.post("/api/users", requireAdmin, (req, res) => {
   const username = requiredString(req.body.username, "用户名");
   const password = requiredString(req.body.password, "密码");
+  const passwordConfirm = requiredString(req.body.passwordConfirm, "确认密码");
+  if (password !== passwordConfirm) fail(400, "两次输入的密码不一致");
   const timestamp = now();
   try {
     db.prepare(`
@@ -560,6 +562,11 @@ app.patch("/api/users/:id", (req, res) => {
   if (!req.user.isAdmin && req.user.id !== target.id) fail(403, "无权限");
   const username = requiredString(req.body.username ?? target.username, "用户名");
   const password = optionalString(req.body.password);
+  const passwordConfirm = optionalString(req.body.passwordConfirm);
+  if (password || passwordConfirm) {
+    if (!password || !passwordConfirm) fail(400, "请完整填写两次密码");
+    if (password !== passwordConfirm) fail(400, "两次输入的密码不一致");
+  }
   const timestamp = now();
   try {
     if (password) {

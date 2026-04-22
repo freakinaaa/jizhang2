@@ -6,7 +6,7 @@ import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ui/table";
-import { Download, Pencil, Trash2, Plus, ShieldCheck } from "lucide-react";
+import { Download, Pencil, Trash2, Plus, ShieldCheck, Eye, EyeOff } from "lucide-react";
 import { Switch } from "../ui/switch";
 import { toast } from "sonner";
 
@@ -15,17 +15,33 @@ export function Users() {
   const isAdmin = !!currentUser?.isAdmin;
   const [open, setOpen] = useState(false);
   const [edit, setEdit] = useState<User | null>(null);
-  const [username, setU] = useState(""); const [password, setP] = useState("");
+  const [username, setU] = useState("");
+  const [password, setP] = useState("");
+  const [passwordConfirm, setPasswordConfirm] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showPasswordConfirm, setShowPasswordConfirm] = useState(false);
 
-  const openNew = () => { setEdit(null); setU(""); setP(""); setOpen(true); };
-  const openEdit = (u: User) => { setEdit(u); setU(u.username); setP(""); setOpen(true); };
+  const resetPasswordState = () => {
+    setP("");
+    setPasswordConfirm("");
+    setShowPassword(false);
+    setShowPasswordConfirm(false);
+  };
+
+  const openNew = () => { setEdit(null); setU(""); resetPasswordState(); setOpen(true); };
+  const openEdit = (u: User) => { setEdit(u); setU(u.username); resetPasswordState(); setOpen(true); };
 
   const submit = async () => {
-    if (!username || (!edit && !password)) return toast.error("请填写完整");
+    const willChangePassword = !!password || !!passwordConfirm;
+    if (!username.trim()) return toast.error("请填写用户名");
+    if (!edit && !password) return toast.error("请填写密码");
+    if (!edit && !passwordConfirm) return toast.error("请再次输入密码");
+    if (edit && willChangePassword && (!password || !passwordConfirm)) return toast.error("请完整填写两次密码");
+    if ((!edit || willChangePassword) && password !== passwordConfirm) return toast.error("两次输入的密码不一致");
     if (!edit && !isAdmin) return toast.error("仅管理员可新增成员");
     if (edit && !isAdmin && edit.id !== currentUser?.id) return toast.error("无权限");
     try {
-      await actions.saveUser({ id: edit?.id, username, password: password || undefined });
+      await actions.saveUser({ id: edit?.id, username: username.trim(), password: password || undefined, passwordConfirm: passwordConfirm || undefined });
       setOpen(false); toast.success("已保存");
     } catch (error: any) {
       toast.error(error.message || "保存失败");
@@ -72,7 +88,7 @@ export function Users() {
                     {u.id === currentUser?.id && <span className="tracking-[0.2em] uppercase text-accent" style={{ fontSize: 12 }}>本人</span>}
                   </TableCell>
                   <TableCell>
-                    <span className="mono text-muted-foreground">已加密隐藏</span>
+                    <span className="mono text-muted-foreground">{isAdmin ? "已加密，可重置" : "已隐藏"}</span>
                   </TableCell>
                   <TableCell>
                     {u.isAdmin
@@ -103,7 +119,35 @@ export function Users() {
           <DialogHeader><DialogTitle>{edit ? "编辑成员 / 重置密码" : "新增成员"}</DialogTitle></DialogHeader>
           <div className="space-y-4 pt-2">
             <div className="space-y-2"><Label>用户名</Label><Input value={username} onChange={e => setU(e.target.value)} /></div>
-            <div className="space-y-2"><Label>{edit ? "新密码（留空则不修改）" : "密码"}</Label><Input type="password" value={password} onChange={e => setP(e.target.value)} /></div>
+            <div className="space-y-2">
+              <Label>{edit ? "新密码（留空则不修改）" : "密码"}</Label>
+              <div className="relative">
+                <Input className="pr-10" type={showPassword ? "text" : "password"} value={password} onChange={e => setP(e.target.value)} />
+                <button
+                  type="button"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground"
+                  onClick={() => setShowPassword(v => !v)}
+                  aria-label={showPassword ? "隐藏密码" : "显示密码"}
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>{edit ? "确认新密码" : "确认密码"}</Label>
+              <div className="relative">
+                <Input className="pr-10" type={showPasswordConfirm ? "text" : "password"} value={passwordConfirm} onChange={e => setPasswordConfirm(e.target.value)} />
+                <button
+                  type="button"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground"
+                  onClick={() => setShowPasswordConfirm(v => !v)}
+                  aria-label={showPasswordConfirm ? "隐藏确认密码" : "显示确认密码"}
+                >
+                  {showPasswordConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+              {edit && <div className="text-muted-foreground" style={{ fontSize: 12 }}>不修改密码时，两项都留空。</div>}
+            </div>
             <div className="flex justify-end gap-2"><Button variant="ghost" onClick={() => setOpen(false)}>取消</Button><Button className="bg-accent hover:bg-accent/90 text-accent-foreground" onClick={submit}>保存</Button></div>
           </div>
         </DialogContent>
