@@ -30,6 +30,7 @@ type DB = {
   repayments: Repayment[];
   budgets: Budget[];
   huis: Hui[];
+  openRegistration?: boolean;
   currentUserId: string | null;
 };
 
@@ -114,6 +115,7 @@ const seed = (): DB => {
     huis: [
       { id: uid(), name: "2026年会", start: "2026-01-01", end: "2026-12-01", principal: 1000, items: Array.from({ length: 12 }, (_, i) => ({ month: `2026-${String(i + 1).padStart(2, "0")}`, principal: 1000, interest: 20 })) },
     ],
+    openRegistration: true,
     currentUserId: null,
   };
 };

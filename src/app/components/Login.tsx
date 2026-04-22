@@ -18,6 +18,7 @@ export function Login() {
       if (!u) { toast.error("用户名或密码错误"); return; }
       setDB(d => ({ ...d, currentUserId: u.id }));
     } else {
+      if (!db.openRegistration) { toast.error("注册已关闭，请联系管理员"); return; }
       if (db.users.some(x => x.username === username)) { toast.error("用户名已存在"); return; }
       const id = Math.random().toString(36).slice(2, 10);
       setDB(d => ({ ...d, users: [...d.users, { id, username, password }], currentUserId: id }));
@@ -90,9 +91,14 @@ export function Login() {
             <Button className="w-full bg-accent hover:bg-accent/90 text-accent-foreground" onClick={submit}>
               {mode === "login" ? "登 录" : "注 册"}
             </Button>
-            <button className="w-full text-muted-foreground hover:text-foreground transition-colors" onClick={() => setMode(mode === "login" ? "register" : "login")}>
-              {mode === "login" ? "没有账户？去注册" : "已有账户？去登录"}
-            </button>
+            {(db.openRegistration || mode === "register") && (
+              <button className="w-full text-muted-foreground hover:text-foreground transition-colors" onClick={() => setMode(mode === "login" ? "register" : "login")}>
+                {mode === "login" ? "没有账户？去注册" : "已有账户？去登录"}
+              </button>
+            )}
+            {!db.openRegistration && mode === "login" && (
+              <div className="text-center text-muted-foreground" style={{ fontSize: 13 }}>注册已关闭，如需账户请联系管理员</div>
+            )}
           </div>
           <div className="pt-6 border-t border-border text-muted-foreground" style={{ fontSize: 14 }}>
             测试账户：<span className="mono">admin / admin</span>

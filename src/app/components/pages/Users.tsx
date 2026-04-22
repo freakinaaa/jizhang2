@@ -7,6 +7,7 @@ import { Label } from "../ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ui/table";
 import { Pencil, Trash2, Plus, ShieldCheck, Eye, EyeOff } from "lucide-react";
+import { Switch } from "../ui/switch";
 import { toast } from "sonner";
 
 export function Users() {
@@ -31,6 +32,15 @@ export function Users() {
       <PageHeader title="用户管理" subtitle="Users" right={
         <Button onClick={openNew} className="bg-accent hover:bg-accent/90 text-accent-foreground"><Plus size={16} /> 新增成员</Button>
       } />
+      <div className="p-4 rounded-lg border border-border bg-card mb-3 flex items-center justify-between">
+        <div>
+          <div style={{ fontSize: 15 }}>开放注册</div>
+          <div className="text-muted-foreground" style={{ fontSize: 13 }}>
+            {db.openRegistration ? "当前允许新用户在登录页自助注册" : "仅管理员可在此页新增成员"}
+          </div>
+        </div>
+        <Switch checked={!!db.openRegistration} onCheckedChange={v => setDB(d => ({ ...d, openRegistration: v }))} />
+      </div>
       <div className="rounded-lg border border-border bg-card">
         <Table>
           <TableHeader><TableRow>
