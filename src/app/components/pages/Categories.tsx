@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useStore, genId, MainCategory, SubCategory } from "../../store";
+import { useStore, MainCategory, SubCategory } from "../../store";
 import { PageHeader } from "../PageHeader";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
@@ -11,7 +11,7 @@ import { Pencil, Trash2, Plus, Lock } from "lucide-react";
 import { toast } from "sonner";
 
 export function Categories() {
-  const { db, setDB } = useStore();
+  const { db, actions } = useStore();
   const [open, setOpen] = useState(false);
   const [edit, setEdit] = useState<SubCategory | null>(null);
   const [name, setName] = useState("");
@@ -20,11 +20,14 @@ export function Categories() {
   const openNew = () => { setEdit(null); setName(""); setMain("干饭钱"); setOpen(true); };
   const openEdit = (c: SubCategory) => { setEdit(c); setName(c.name); setMain(c.main); setOpen(true); };
 
-  const submit = () => {
+  const submit = async () => {
     if (!name.trim()) return toast.error("请输入名称");
-    if (edit) setDB(d => ({ ...d, categories: d.categories.map(c => c.id === edit.id ? { ...c, name, main } : c) }));
-    else setDB(d => ({ ...d, categories: [...d.categories, { id: genId(), name, main }] }));
-    setOpen(false); toast.success("已保存");
+    try {
+      await actions.saveCategory({ id: edit?.id, name, main });
+      setOpen(false); toast.success("已保存");
+    } catch (error: any) {
+      toast.error(error.message || "保存失败");
+    }
   };
 
   return (
@@ -42,7 +45,7 @@ export function Categories() {
               <Lock size={12} className="ml-auto text-muted-foreground" />
             </div>
             <div className="text-muted-foreground" style={{ fontSize: 14 }}>固定大类，不可修改</div>
-            <div className="num text-muted-foreground mt-2" style={{ fontSize: 14 }}>{db.categories.filter(c => c.main === m).length} 个子类</div>
+            <div className="num text-muted-foreground mt-2" style={{ fontSize: 14 }}>{db.categories.filter(c => c.main === m && !c.isDeleted).length} 个子类</div>
           </div>
         ))}
       </div>
@@ -53,13 +56,17 @@ export function Categories() {
             <TableHead>子类名称</TableHead><TableHead>所属大类</TableHead><TableHead className="text-right">操作</TableHead>
           </TableRow></TableHeader>
           <TableBody>
-            {db.categories.map(c => (
+            {db.categories.filter(c => !c.isDeleted).map(c => (
               <TableRow key={c.id}>
                 <TableCell>{c.name}</TableCell>
                 <TableCell className="text-muted-foreground">{c.main}</TableCell>
                 <TableCell className="text-right">
                   <button className="p-1.5 hover:text-accent" onClick={() => openEdit(c)}><Pencil size={14} /></button>
-                  <button className="p-1.5 hover:text-destructive" onClick={() => { if (confirm("删除？")) setDB(d => ({ ...d, categories: d.categories.filter(x => x.id !== c.id) })); }}><Trash2 size={14} /></button>
+                  <button className="p-1.5 hover:text-destructive" onClick={async () => {
+                    if (!confirm("删除？")) return;
+                    try { await actions.deleteCategory(c.id); }
+                    catch (error: any) { toast.error(error.message || "删除失败"); }
+                  }}><Trash2 size={14} /></button>
                 </TableCell>
               </TableRow>
             ))}

@@ -1,0 +1,17 @@
+services:
+  jizhang:
+    image: jizhang:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: jizhang
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      DATA_DIR: /data
+      PORT: 3000
+      HOST: 0.0.0.0
+    volumes:
+      - ./data:/data

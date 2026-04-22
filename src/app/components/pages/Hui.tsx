@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useStore, genId, fmtMoney, Hui as H, HuiItem } from "../../store";
+import { useEffect, useState } from "react";
+import { useStore, fmtMoney, Hui as H } from "../../store";
 import { PageHeader } from "../PageHeader";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
@@ -9,23 +9,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from ".
 import { Pencil, Trash2, Plus } from "lucide-react";
 import { toast } from "sonner";
 
-function buildItems(start: string, end: string, principal: number, prev?: HuiItem[]): HuiItem[] {
-  const out: HuiItem[] = [];
-  const [sy, sm] = start.slice(0, 7).split("-").map(Number);
-  const [ey, em] = end.slice(0, 7).split("-").map(Number);
-  let y = sy, m = sm;
-  const diff = (ey - sy) * 12 + (em - sm);
-  for (let k = 0; k < diff; k++) {
-    const key = `${y}-${String(m).padStart(2, "0")}`;
-    const old = prev?.find(i => i.month === key);
-    out.push({ month: key, principal, interest: old?.interest ?? 0 });
-    m++; if (m > 12) { m = 1; y++; }
-  }
-  return out;
-}
-
 export function Hui() {
-  const { db, setDB } = useStore();
+  const { db, actions } = useStore();
   const [active, setActive] = useState<string | null>(db.huis[0]?.id ?? null);
   const [open, setOpen] = useState(false);
   const [edit, setEdit] = useState<H | null>(null);
@@ -33,32 +18,41 @@ export function Hui() {
 
   const current = db.huis.find(h => h.id === active) ?? db.huis[0] ?? null;
 
+  useEffect(() => {
+    if (!db.huis.length) { setActive(null); return; }
+    if (!current) setActive(db.huis[0].id);
+  }, [current, db.huis]);
+
   const openNew = () => { setEdit(null); setName(""); setStart(""); setEnd(""); setPr(""); setOpen(true); };
   const openEdit = () => { if (!current) return; setEdit(current); setName(current.name); setStart(current.start); setEnd(current.end); setPr(String(current.principal)); setOpen(true); };
 
-  const submit = () => {
+  const submit = async () => {
     const p = +principal || 0;
     if (!name || !start || !end || !p) return toast.error("请完整填写");
-    if (edit) {
-      const items = buildItems(start, end, p, edit.items);
-      setDB(d => ({ ...d, huis: d.huis.map(h => h.id === edit.id ? { ...h, name, start, end, principal: p, items } : h) }));
-    } else {
-      const id = genId();
-      setDB(d => ({ ...d, huis: [...d.huis, { id, name, start, end, principal: p, items: buildItems(start, end, p) }] }));
-      setActive(id);
+    try {
+      await actions.saveHui({ id: edit?.id, name, start, end, principal: p });
+      setOpen(false); toast.success("已保存");
+    } catch (error: any) {
+      toast.error(error.message || "保存失败");
     }
-    setOpen(false); toast.success("已保存");
   };
 
-  const delHui = () => {
+  const delHui = async () => {
     if (!current || !confirm("删除该会钱？")) return;
-    setDB(d => ({ ...d, huis: d.huis.filter(h => h.id !== current.id) }));
-    setActive(db.huis.filter(h => h.id !== current.id)[0]?.id ?? null);
+    try {
+      await actions.deleteHui(current.id);
+    } catch (error: any) {
+      toast.error(error.message || "删除失败");
+    }
   };
 
-  const updateInterest = (month: string, v: string) => {
+  const updateInterest = async (month: string, v: string) => {
     if (!current) return;
-    setDB(d => ({ ...d, huis: d.huis.map(h => h.id === current.id ? { ...h, items: h.items.map(i => i.month === month ? { ...i, interest: +v || 0 } : i) } : h) }));
+    try {
+      await actions.updateHuiInterest(current.id, month, +v || 0);
+    } catch (error: any) {
+      toast.error(error.message || "更新失败");
+    }
   };
 
   const total = current ? current.items.reduce((s, i) => s + i.principal + i.interest, 0) : 0;

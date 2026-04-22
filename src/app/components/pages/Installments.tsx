@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useStore, genId, fmtMoney, Installment } from "../../store";
+import { useStore, fmtMoney, Installment } from "../../store";
 import { PageHeader } from "../PageHeader";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
@@ -11,7 +11,7 @@ import { Pencil, Trash2, Plus, Settings } from "lucide-react";
 import { toast } from "sonner";
 
 export function Installments() {
-  const { db, setDB } = useStore();
+  const { db, actions } = useStore();
   const [open, setOpen] = useState(false);
   const [edit, setEdit] = useState<Installment | null>(null);
   const [userId, setUserId] = useState(""); const [amount, setAmount] = useState("");
@@ -28,15 +28,15 @@ export function Installments() {
   const openNew = () => { setEdit(null); setUserId(db.users[0]?.id ?? ""); setAmount(""); setStart(""); setEnd(""); setPlatform(""); setOpen(true); };
   const openEdit = (i: Installment) => { setEdit(i); setUserId(i.userId); setAmount(String(i.amount)); setStart(i.start); setEnd(i.end); setPlatform(i.platform); setOpen(true); };
 
-  const submit = () => {
+  const submit = async () => {
     const amt = parseFloat(amount);
     if (!userId || !amt || !start || !end || !platform) return toast.error("请完整填写");
-    if (edit) {
-      setDB(d => ({ ...d, installments: d.installments.map(i => i.id === edit.id ? { ...i, userId, amount: amt, start, end, platform } : i) }));
-    } else {
-      setDB(d => ({ ...d, installments: [{ id: genId(), userId, amount: amt, start, end, platform }, ...d.installments] }));
+    try {
+      await actions.saveInstallment({ id: edit?.id, userId, amount: amt, start, end, platform });
+      setOpen(false); toast.success("已保存");
+    } catch (error: any) {
+      toast.error(error.message || "保存失败");
     }
-    setOpen(false); toast.success("已保存");
   };
 
   return (
@@ -65,7 +65,7 @@ export function Installments() {
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">全部</SelectItem>
-              {db.users.map(u => <SelectItem key={u.id} value={u.id}>{u.username}</SelectItem>)}
+              {db.users.filter(u => !u.isDeleted).map(u => <SelectItem key={u.id} value={u.id}>{u.username}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
@@ -74,7 +74,7 @@ export function Installments() {
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">全部</SelectItem>
-              {db.installmentPlatforms.map(p => <SelectItem key={p.id} value={p.name}>{p.name}</SelectItem>)}
+              {db.installmentPlatforms.filter(p => !p.isDeleted).map(p => <SelectItem key={p.id} value={p.name}>{p.name}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
@@ -126,7 +126,11 @@ export function Installments() {
                 </TableCell>
                 <TableCell className="text-right">
                   <button className="p-1.5 hover:text-accent" onClick={() => openEdit(i)}><Pencil size={14} /></button>
-                  <button className="p-1.5 hover:text-destructive" onClick={() => { if (confirm("删除？")) setDB(d => ({ ...d, installments: d.installments.filter(x => x.id !== i.id) })); }}><Trash2 size={14} /></button>
+                  <button className="p-1.5 hover:text-destructive" onClick={async () => {
+                    if (!confirm("删除？")) return;
+                    try { await actions.deleteInstallment(i.id); }
+                    catch (error: any) { toast.error(error.message || "删除失败"); }
+                  }}><Trash2 size={14} /></button>
                 </TableCell>
               </TableRow>
               );
@@ -143,7 +147,7 @@ export function Installments() {
             <div className="space-y-2"><Label>分期用户</Label>
               <Select value={userId} onValueChange={setUserId}>
                 <SelectTrigger><SelectValue placeholder="选择" /></SelectTrigger>
-                <SelectContent>{db.users.map(u => <SelectItem key={u.id} value={u.id}>{u.username}</SelectItem>)}</SelectContent>
+                <SelectContent>{db.users.filter(u => !u.isDeleted).map(u => <SelectItem key={u.id} value={u.id}>{u.username}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div className="space-y-2"><Label>分期费用（每月）</Label><Input type="number" value={amount} onChange={e => setAmount(e.target.value)} /></div>
@@ -154,7 +158,7 @@ export function Installments() {
             <div className="space-y-2"><Label>分期平台</Label>
               <Select value={platform} onValueChange={setPlatform}>
                 <SelectTrigger><SelectValue placeholder="选择分期平台" /></SelectTrigger>
-                <SelectContent>{db.installmentPlatforms.map(p => <SelectItem key={p.id} value={p.name}>{p.name}</SelectItem>)}</SelectContent>
+                <SelectContent>{db.installmentPlatforms.filter(p => !p.isDeleted).map(p => <SelectItem key={p.id} value={p.name}>{p.name}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div className="flex justify-end gap-2"><Button variant="ghost" onClick={() => setOpen(false)}>取消</Button><Button className="bg-accent hover:bg-accent/90 text-accent-foreground" onClick={submit}>保存</Button></div>
@@ -168,21 +172,32 @@ export function Installments() {
           <div className="space-y-3">
             <div className="flex gap-2">
               <Input value={newPlat} onChange={e => setNewPlat(e.target.value)} placeholder="新平台名称" />
-              <Button onClick={() => { if (!newPlat) return; setDB(d => ({ ...d, installmentPlatforms: [...d.installmentPlatforms, { id: genId(), name: newPlat }] })); setNewPlat(""); }}>添加</Button>
+              <Button onClick={async () => {
+                if (!newPlat) return;
+                try { await actions.saveInstallmentPlatform({ name: newPlat }); setNewPlat(""); }
+                catch (error: any) { toast.error(error.message || "添加失败"); }
+              }}>添加</Button>
             </div>
             <div className="space-y-2">
-              {db.installmentPlatforms.map(p => (
+              {db.installmentPlatforms.filter(p => !p.isDeleted).map(p => (
                 <div key={p.id} className="flex items-center gap-2 p-2 rounded-md border border-border">
                   {editPlat === p.id
                     ? <Input value={editPlatName} onChange={e => setEditPlatName(e.target.value)} />
                     : <span className="flex-1">{p.name}</span>}
                   {editPlat === p.id
-                    ? <Button size="sm" onClick={() => { setDB(d => ({ ...d, installmentPlatforms: d.installmentPlatforms.map(x => x.id === p.id ? { ...x, name: editPlatName } : x) })); setEditPlat(null); }}>保存</Button>
+                    ? <Button size="sm" onClick={async () => {
+                        try { await actions.saveInstallmentPlatform({ id: p.id, name: editPlatName }); setEditPlat(null); }
+                        catch (error: any) { toast.error(error.message || "保存失败"); }
+                      }}>保存</Button>
                     : <button className="p-1.5 hover:text-accent" onClick={() => { setEditPlat(p.id); setEditPlatName(p.name); }}><Pencil size={14} /></button>}
-                  <button className="p-1.5 hover:text-destructive" onClick={() => { if (confirm("删除平台？")) setDB(d => ({ ...d, installmentPlatforms: d.installmentPlatforms.filter(x => x.id !== p.id) })); }}><Trash2 size={14} /></button>
+                  <button className="p-1.5 hover:text-destructive" onClick={async () => {
+                    if (!confirm("删除平台？")) return;
+                    try { await actions.deleteInstallmentPlatform(p.id); }
+                    catch (error: any) { toast.error(error.message || "删除失败"); }
+                  }}><Trash2 size={14} /></button>
                 </div>
               ))}
-              {db.installmentPlatforms.length === 0 && <div className="text-muted-foreground py-4 text-center" style={{ fontSize: 14 }}>暂无平台</div>}
+              {db.installmentPlatforms.filter(p => !p.isDeleted).length === 0 && <div className="text-muted-foreground py-4 text-center" style={{ fontSize: 14 }}>暂无平台</div>}
             </div>
           </div>
         </DialogContent>

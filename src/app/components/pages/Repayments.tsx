@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useStore, genId, fmtMoney, getMonth, Repayment } from "../../store";
+import { useStore, fmtMoney, getMonth, Repayment } from "../../store";
 import { PageHeader } from "../PageHeader";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
@@ -7,11 +7,11 @@ import { Label } from "../ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ui/table";
-import { Pencil, Trash2, Plus, Settings, X } from "lucide-react";
+import { Pencil, Trash2, Plus, Settings } from "lucide-react";
 import { toast } from "sonner";
 
 export function Repayments() {
-  const { db, setDB, currentUser } = useStore();
+  const { db, actions, currentUser } = useStore();
   const [cfg, setCfg] = useState(false);
   const [newPlat, setNewPlat] = useState("");
   const [editPlat, setEditPlat] = useState<string | null>(null);
@@ -25,7 +25,7 @@ export function Repayments() {
 
   const openNew = () => {
     setEdit(null); setMonth(getMonth()); setUserId(currentUser?.id ?? "");
-    setItems(Object.fromEntries(db.platforms.map(p => [p.id, ""]))); setOpen(true);
+    setItems(Object.fromEntries(db.platforms.filter(p => !p.isDeleted).map(p => [p.id, ""]))); setOpen(true);
   };
   const openEdit = (r: Repayment) => {
     setEdit(r); setMonth(r.month); setUserId(r.userId);
@@ -35,14 +35,17 @@ export function Repayments() {
 
   const total = Object.values(items).reduce((s, v) => s + (parseFloat(v) || 0), 0);
 
-  const submit = () => {
+  const submit = async () => {
     const payload: Repayment = {
-      id: edit?.id ?? genId(), month, userId,
-      items: db.platforms.map(p => ({ platformId: p.id, amount: parseFloat(items[p.id]) || 0 })).filter(i => i.amount > 0),
+      id: edit?.id ?? "", month, userId,
+      items: db.platforms.filter(p => !p.isDeleted).map(p => ({ platformId: p.id, amount: parseFloat(items[p.id]) || 0 })).filter(i => i.amount > 0),
     };
-    if (edit) setDB(d => ({ ...d, repayments: d.repayments.map(r => r.id === edit.id ? payload : r) }));
-    else setDB(d => ({ ...d, repayments: [payload, ...d.repayments] }));
-    setOpen(false); toast.success("已保存");
+    try {
+      await actions.saveRepayment({ ...payload, id: edit?.id });
+      setOpen(false); toast.success("已保存");
+    } catch (error: any) {
+      toast.error(error.message || "保存失败");
+    }
   };
 
   return (
@@ -72,7 +75,11 @@ export function Repayments() {
                   </TableCell>
                   <TableCell className="text-right">
                     <button className="p-1.5 hover:text-accent" onClick={() => openEdit(r)}><Pencil size={14} /></button>
-                    <button className="p-1.5 hover:text-destructive" onClick={() => { if (confirm("删除？")) setDB(d => ({ ...d, repayments: d.repayments.filter(x => x.id !== r.id) })); }}><Trash2 size={14} /></button>
+                    <button className="p-1.5 hover:text-destructive" onClick={async () => {
+                      if (!confirm("删除？")) return;
+                      try { await actions.deleteRepayment(r.id); }
+                      catch (error: any) { toast.error(error.message || "删除失败"); }
+                    }}><Trash2 size={14} /></button>
                   </TableCell>
                 </TableRow>
               );
@@ -88,18 +95,29 @@ export function Repayments() {
           <div className="space-y-3">
             <div className="flex gap-2">
               <Input value={newPlat} onChange={e => setNewPlat(e.target.value)} placeholder="新平台名称" />
-              <Button onClick={() => { if (!newPlat) return; setDB(d => ({ ...d, platforms: [...d.platforms, { id: genId(), name: newPlat }] })); setNewPlat(""); }}>添加</Button>
+              <Button onClick={async () => {
+                if (!newPlat) return;
+                try { await actions.saveRepaymentPlatform({ name: newPlat }); setNewPlat(""); }
+                catch (error: any) { toast.error(error.message || "添加失败"); }
+              }}>添加</Button>
             </div>
             <div className="space-y-2">
-              {db.platforms.map(p => (
+              {db.platforms.filter(p => !p.isDeleted).map(p => (
                 <div key={p.id} className="flex items-center gap-2 p-2 rounded-md border border-border">
                   {editPlat === p.id
                     ? <Input value={editPlatName} onChange={e => setEditPlatName(e.target.value)} />
                     : <span className="flex-1">{p.name}</span>}
                   {editPlat === p.id
-                    ? <Button size="sm" onClick={() => { setDB(d => ({ ...d, platforms: d.platforms.map(x => x.id === p.id ? { ...x, name: editPlatName } : x) })); setEditPlat(null); }}>保存</Button>
+                    ? <Button size="sm" onClick={async () => {
+                        try { await actions.saveRepaymentPlatform({ id: p.id, name: editPlatName }); setEditPlat(null); }
+                        catch (error: any) { toast.error(error.message || "保存失败"); }
+                      }}>保存</Button>
                     : <button className="p-1.5 hover:text-accent" onClick={() => { setEditPlat(p.id); setEditPlatName(p.name); }}><Pencil size={14} /></button>}
-                  <button className="p-1.5 hover:text-destructive" onClick={() => { if (confirm("删除平台？")) setDB(d => ({ ...d, platforms: d.platforms.filter(x => x.id !== p.id) })); }}><Trash2 size={14} /></button>
+                  <button className="p-1.5 hover:text-destructive" onClick={async () => {
+                    if (!confirm("删除平台？")) return;
+                    try { await actions.deleteRepaymentPlatform(p.id); }
+                    catch (error: any) { toast.error(error.message || "删除失败"); }
+                  }}><Trash2 size={14} /></button>
                 </div>
               ))}
             </div>
@@ -116,14 +134,14 @@ export function Repayments() {
               <div className="space-y-2"><Label>还款人</Label>
                 <Select value={userId} onValueChange={setUserId}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{db.users.map(u => <SelectItem key={u.id} value={u.id}>{u.username}</SelectItem>)}</SelectContent>
+                  <SelectContent>{db.users.filter(u => !u.isDeleted).map(u => <SelectItem key={u.id} value={u.id}>{u.username}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
             </div>
             <div className="space-y-2">
               <Label>各平台还款</Label>
-              {db.platforms.length === 0 && <div className="text-muted-foreground" style={{ fontSize: 14 }}>请先配置平台</div>}
-              {db.platforms.map(p => (
+              {db.platforms.filter(p => !p.isDeleted).length === 0 && <div className="text-muted-foreground" style={{ fontSize: 14 }}>请先配置平台</div>}
+              {db.platforms.filter(p => !p.isDeleted).map(p => (
                 <div key={p.id} className="flex items-center gap-2">
                   <span className="w-24 shrink-0 text-muted-foreground">{p.name}</span>
                   <Input type="number" className="num" value={items[p.id] ?? ""} onChange={e => setItems({ ...items, [p.id]: e.target.value })} placeholder="0.00" />

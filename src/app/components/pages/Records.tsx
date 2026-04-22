@@ -11,7 +11,7 @@ import { Pencil, Trash2, Plus } from "lucide-react";
 import { toast } from "sonner";
 
 export function Records() {
-  const { db, setDB } = useStore();
+  const { db, actions } = useStore();
   const [from, setFrom] = useState(""); const [to, setTo] = useState("");
   const [user, setUser] = useState("all"); const [main, setMain] = useState("all");
   const [open, setOpen] = useState(false);
@@ -46,7 +46,7 @@ export function Records() {
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">全部</SelectItem>
-              {db.users.map(u => <SelectItem key={u.id} value={u.id}>{u.username}</SelectItem>)}
+              {db.users.filter(u => !u.isDeleted).map(u => <SelectItem key={u.id} value={u.id}>{u.username}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
@@ -88,10 +88,14 @@ export function Records() {
                   <TableCell className="text-muted-foreground">{r.note || "—"}</TableCell>
                   <TableCell className="text-right">
                     <button className="p-1.5 hover:text-accent" onClick={() => { setEditing(r); setOpen(true); }}><Pencil size={14} /></button>
-                    <button className="p-1.5 hover:text-destructive" onClick={() => {
+                    <button className="p-1.5 hover:text-destructive" onClick={async () => {
                       if (!confirm("删除该记录？")) return;
-                      setDB(d => ({ ...d, records: d.records.filter(x => x.id !== r.id) }));
-                      toast.success("已删除");
+                      try {
+                        await actions.deleteRecord(r.id);
+                        toast.success("已删除");
+                      } catch (error: any) {
+                        toast.error(error.message || "删除失败");
+                      }
                     }}><Trash2 size={14} /></button>
                   </TableCell>
                 </TableRow>

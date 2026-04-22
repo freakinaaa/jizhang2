@@ -28,7 +28,7 @@ export function Dashboard() {
       const c = db.categories.find(c => c.id === id);
       return { name: c?.name ?? "未知", main: c?.main ?? "", value: v };
     }).sort((a, b) => b.value - a.value);
-    const recent = [...inMonth].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 8);
+    const recent = [...inMonth].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5);
     return { expense, budget, installs, repay, trend, ranking, recent };
   }, [db, month]);
 

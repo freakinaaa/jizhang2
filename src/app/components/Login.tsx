@@ -6,23 +6,23 @@ import { Label } from "./ui/label";
 import { toast } from "sonner";
 
 export function Login() {
-  const { db, setDB } = useStore();
+  const { db, actions } = useStore();
   const [mode, setMode] = useState<"login" | "register">("login");
   const [username, setU] = useState("");
   const [password, setP] = useState("");
 
-  const submit = () => {
+  const submit = async () => {
     if (!username || !password) { toast.error("请输入用户名与密码"); return; }
-    if (mode === "login") {
-      const u = db.users.find(x => x.username === username && x.password === password);
-      if (!u) { toast.error("用户名或密码错误"); return; }
-      setDB(d => ({ ...d, currentUserId: u.id }));
-    } else {
-      if (!db.openRegistration) { toast.error("注册已关闭，请联系管理员"); return; }
-      if (db.users.some(x => x.username === username)) { toast.error("用户名已存在"); return; }
-      const id = Math.random().toString(36).slice(2, 10);
-      setDB(d => ({ ...d, users: [...d.users, { id, username, password }], currentUserId: id }));
-      toast.success("注册成功");
+    try {
+      if (mode === "login") {
+        await actions.login(username, password);
+      } else {
+        if (!db.openRegistration) { toast.error("注册已关闭，请联系管理员"); return; }
+        await actions.register(username, password);
+        toast.success("注册成功");
+      }
+    } catch (error: any) {
+      toast.error(error.message || "操作失败");
     }
   };
 

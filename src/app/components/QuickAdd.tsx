@@ -4,11 +4,11 @@ import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Button } from "./ui/button";
 import { Textarea } from "./ui/textarea";
-import { useStore, genId, getToday, Record as R } from "../store";
+import { useStore, getToday, Record as R } from "../store";
 import { toast } from "sonner";
 
 export function QuickAdd({ open, onOpenChange, initial }: { open: boolean; onOpenChange: (o: boolean) => void; initial?: R }) {
-  const { db, setDB, currentUser } = useStore();
+  const { db, actions, currentUser } = useStore();
   const [date, setDate] = useState(getToday());
   const [sub, setSub] = useState<string>("");
   const [amount, setAmount] = useState<string>("");
@@ -24,22 +24,27 @@ export function QuickAdd({ open, onOpenChange, initial }: { open: boolean; onOpe
 
   const reset = () => { setDate(getToday()); setSub(""); setAmount(""); setNote(""); };
 
-  const submit = () => {
+  const submit = async () => {
     const amt = parseFloat(amount);
     if (!sub) return toast.error("请选择花费事项");
     if (!amt || amt <= 0) return toast.error("金额需大于 0");
-    if (initial) {
-      setDB(d => ({ ...d, records: d.records.map(r => r.id === initial.id ? { ...r, date, subCategoryId: sub, amount: amt, note } : r) }));
-      toast.success("已更新");
-    } else {
-      const rec: R = { id: genId(), date, subCategoryId: sub, amount: amt, note, userId: currentUser!.id };
-      setDB(d => ({ ...d, records: [rec, ...d.records] }));
-      toast.success("已记账");
+    try {
+      await actions.saveRecord({
+        id: initial?.id,
+        date,
+        subCategoryId: sub,
+        amount: amt,
+        note,
+        userId: initial?.userId ?? currentUser!.id,
+      });
+      toast.success(initial ? "已更新" : "已记账");
+      onOpenChange(false);
+    } catch (error: any) {
+      toast.error(error.message || "保存失败");
     }
-    onOpenChange(false);
   };
 
-  const grouped = ["干饭钱", "潇洒钱", "其他钱"].map(m => ({ main: m, subs: db.categories.filter(c => c.main === m) }));
+  const grouped = ["干饭钱", "潇洒钱", "其他钱"].map(m => ({ main: m, subs: db.categories.filter(c => c.main === m && !c.isDeleted) }));
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

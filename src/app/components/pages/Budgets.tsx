@@ -9,7 +9,7 @@ import { Pencil } from "lucide-react";
 import { toast } from "sonner";
 
 export function Budgets() {
-  const { db, setDB } = useStore();
+  const { db, actions } = useStore();
   const month = getMonth();
   const existing = db.budgets.find(b => b.month === month);
   const [total, setTotal] = useState(String(existing?.total ?? ""));
@@ -23,15 +23,16 @@ export function Budgets() {
   const totalN = +total || 0;
   const diff = totalN - subSum;
 
-  const save = () => {
+  const save = async () => {
     if (totalN <= 0) return toast.error("请填写总预算");
     if (diff !== 0) return toast.error(`三项之和 ¥${fmtMoney(subSum)} ≠ 总预算 ¥${fmtMoney(totalN)}`);
     const p = { month, total: totalN, ganfan: +ganfan || 0, xiaosa: +xiaosa || 0, other: +other || 0 };
-    setDB(d => {
-      const ex = d.budgets.find(b => b.month === month);
-      return { ...d, budgets: ex ? d.budgets.map(b => b.month === month ? p : b) : [...d.budgets, p] };
-    });
-    toast.success("已保存");
+    try {
+      await actions.saveBudget(p);
+      toast.success("已保存");
+    } catch (error: any) {
+      toast.error(error.message || "保存失败");
+    }
   };
 
   return (

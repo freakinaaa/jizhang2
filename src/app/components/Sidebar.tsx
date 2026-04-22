@@ -16,7 +16,7 @@ const items: { key: PageKey; label: string; icon: any }[] = [
 ];
 
 export function Sidebar({ page, onChange, onQuickAdd }: { page: PageKey; onChange: (p: PageKey) => void; onQuickAdd: () => void }) {
-  const { currentUser, setDB } = useStore();
+  const { currentUser, actions } = useStore();
   return (
     <aside className="sidebar-bg w-72 h-full shrink-0 text-sidebar-foreground flex flex-col border-r border-sidebar-border relative">
       <div className="px-7 pt-8 pb-6 border-b border-sidebar-border">
@@ -68,7 +68,7 @@ export function Sidebar({ page, onChange, onQuickAdd }: { page: PageKey; onChang
             </div>
           </div>
         </div>
-        <button onClick={() => setDB(d => ({ ...d, currentUserId: null }))} className="text-sidebar-foreground/50 hover:text-accent p-2 shrink-0" title="退出登录">
+        <button onClick={() => actions.logout()} className="text-sidebar-foreground/50 hover:text-accent p-2 shrink-0" title="退出登录">
           <LogOut size={16} />
         </button>
       </div>

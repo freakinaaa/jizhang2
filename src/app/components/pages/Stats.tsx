@@ -48,7 +48,7 @@ export function Stats() {
             <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">全部用户</SelectItem>
-              {db.users.map(u => <SelectItem key={u.id} value={u.id}>{u.username}</SelectItem>)}
+              {db.users.filter(u => !u.isDeleted).map(u => <SelectItem key={u.id} value={u.id}>{u.username}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>

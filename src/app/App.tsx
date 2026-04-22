@@ -16,7 +16,7 @@ import { Toaster } from "./components/ui/sonner";
 import { Menu, Plus } from "lucide-react";
 
 function Shell() {
-  const { currentUser } = useStore();
+  const { currentUser, loading } = useStore();
   const [page, setPage] = useState<PageKey>("dashboard");
   const [quick, setQuick] = useState(false);
   const [mobile, setMobile] = useState(false);
@@ -31,6 +31,7 @@ function Shell() {
     return () => window.removeEventListener("keydown", h);
   }, []);
 
+  if (loading) return <div className="min-h-screen grid place-items-center bg-background text-muted-foreground">加载中...</div>;
   if (!currentUser) return <Login />;
 
   const P = {
