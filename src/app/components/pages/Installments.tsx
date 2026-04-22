@@ -7,7 +7,7 @@ import { Label } from "../ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ui/table";
-import { Pencil, Trash2, Plus } from "lucide-react";
+import { Pencil, Trash2, Plus, Settings } from "lucide-react";
 import { toast } from "sonner";
 
 export function Installments() {
@@ -17,6 +17,10 @@ export function Installments() {
   const [userId, setUserId] = useState(""); const [amount, setAmount] = useState("");
   const [start, setStart] = useState(""); const [end, setEnd] = useState("");
   const [platform, setPlatform] = useState("");
+  const [cfg, setCfg] = useState(false);
+  const [newPlat, setNewPlat] = useState("");
+  const [editPlat, setEditPlat] = useState<string | null>(null);
+  const [editPlatName, setEditPlatName] = useState("");
 
   const openNew = () => { setEdit(null); setUserId(db.users[0]?.id ?? ""); setAmount(""); setStart(""); setEnd(""); setPlatform(""); setOpen(true); };
   const openEdit = (i: Installment) => { setEdit(i); setUserId(i.userId); setAmount(String(i.amount)); setStart(i.start); setEnd(i.end); setPlatform(i.platform); setOpen(true); };
@@ -35,7 +39,10 @@ export function Installments() {
   return (
     <div>
       <PageHeader title="分期费用管理" subtitle="Installments" right={
-        <Button onClick={openNew} className="bg-accent hover:bg-accent/90 text-accent-foreground"><Plus size={16} /> 新增分期</Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setCfg(true)}><Settings size={16} /> 配置平台</Button>
+          <Button onClick={openNew} className="bg-accent hover:bg-accent/90 text-accent-foreground"><Plus size={16} /> 新增分期</Button>
+        </div>
       } />
       <div className="rounded-lg border border-border bg-card">
         <Table>
@@ -87,8 +94,39 @@ export function Installments() {
               <div className="space-y-2"><Label>开始时间</Label><Input type="date" value={start} onChange={e => setStart(e.target.value)} /></div>
               <div className="space-y-2"><Label>结束时间</Label><Input type="date" value={end} onChange={e => setEnd(e.target.value)} /></div>
             </div>
-            <div className="space-y-2"><Label>分期平台</Label><Input value={platform} onChange={e => setPlatform(e.target.value)} placeholder="花呗/信用卡..." /></div>
+            <div className="space-y-2"><Label>分期平台</Label>
+              <Select value={platform} onValueChange={setPlatform}>
+                <SelectTrigger><SelectValue placeholder="选择分期平台" /></SelectTrigger>
+                <SelectContent>{db.installmentPlatforms.map(p => <SelectItem key={p.id} value={p.name}>{p.name}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
             <div className="flex justify-end gap-2"><Button variant="ghost" onClick={() => setOpen(false)}>取消</Button><Button className="bg-accent hover:bg-accent/90 text-accent-foreground" onClick={submit}>保存</Button></div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={cfg} onOpenChange={setCfg}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>配置分期平台</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <div className="flex gap-2">
+              <Input value={newPlat} onChange={e => setNewPlat(e.target.value)} placeholder="新平台名称" />
+              <Button onClick={() => { if (!newPlat) return; setDB(d => ({ ...d, installmentPlatforms: [...d.installmentPlatforms, { id: genId(), name: newPlat }] })); setNewPlat(""); }}>添加</Button>
+            </div>
+            <div className="space-y-2">
+              {db.installmentPlatforms.map(p => (
+                <div key={p.id} className="flex items-center gap-2 p-2 rounded-md border border-border">
+                  {editPlat === p.id
+                    ? <Input value={editPlatName} onChange={e => setEditPlatName(e.target.value)} />
+                    : <span className="flex-1">{p.name}</span>}
+                  {editPlat === p.id
+                    ? <Button size="sm" onClick={() => { setDB(d => ({ ...d, installmentPlatforms: d.installmentPlatforms.map(x => x.id === p.id ? { ...x, name: editPlatName } : x) })); setEditPlat(null); }}>保存</Button>
+                    : <button className="p-1.5 hover:text-accent" onClick={() => { setEditPlat(p.id); setEditPlatName(p.name); }}><Pencil size={14} /></button>}
+                  <button className="p-1.5 hover:text-destructive" onClick={() => { if (confirm("删除平台？")) setDB(d => ({ ...d, installmentPlatforms: d.installmentPlatforms.filter(x => x.id !== p.id) })); }}><Trash2 size={14} /></button>
+                </div>
+              ))}
+              {db.installmentPlatforms.length === 0 && <div className="text-muted-foreground py-4 text-center" style={{ fontSize: 14 }}>暂无平台</div>}
+            </div>
           </div>
         </DialogContent>
       </Dialog>

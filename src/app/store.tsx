@@ -25,6 +25,7 @@ type DB = {
   categories: SubCategory[];
   records: Record[];
   installments: Installment[];
+  installmentPlatforms: Platform[];
   platforms: Platform[];
   repayments: Repayment[];
   budgets: Budget[];
@@ -86,6 +87,15 @@ const seed = (): DB => {
       { id: uid(), userId: adminId, amount: 480, start: "2025-03-20", end: "2026-03-20", platform: "白条" },
       { id: uid(), userId: adminId, amount: 3500, start: new Date(new Date().setMonth(new Date().getMonth() - 1)).toISOString().slice(0, 10), end: new Date(new Date().setMonth(new Date().getMonth() + 23)).toISOString().slice(0, 10), platform: "工行分期" },
     ],
+    installmentPlatforms: [
+      { id: uid(), name: "花呗" },
+      { id: uid(), name: "招行信用卡" },
+      { id: uid(), name: "京东白条" },
+      { id: uid(), name: "中信信用卡" },
+      { id: uid(), name: "美团月付" },
+      { id: uid(), name: "白条" },
+      { id: uid(), name: "工行分期" },
+    ],
     platforms,
     repayments: [
       { id: uid(), month, userId: adminId, items: platforms.map(p => ({ platformId: p.id, amount: Math.round(Math.random() * 500 + 100) })) },
@@ -108,7 +118,7 @@ const seed = (): DB => {
   };
 };
 
-const KEY = "accounting-app-v3";
+const KEY = "accounting-app-v4";
 
 function load(): DB {
   try {
