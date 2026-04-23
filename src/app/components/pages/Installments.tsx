@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useStore, fmtMoney, Installment } from "../../store";
 import { PageHeader } from "../PageHeader";
 import { Button } from "../ui/button";
@@ -25,6 +25,20 @@ export function Installments() {
   const [fUser, setFUser] = useState("all");
   const [fPlat, setFPlat] = useState("all");
   const [fStatus, setFStatus] = useState("all");
+
+  const filteredInstallments = useMemo(() => {
+    const today = new Date().toISOString().slice(0, 10);
+    return db.installments.filter(i => {
+      if (fUser !== "all" && i.userId !== fUser) return false;
+      if (fPlat !== "all" && i.platform !== fPlat) return false;
+      const active = i.start <= today && i.end >= today;
+      if (fStatus === "active" && !active) return false;
+      if (fStatus === "ended" && active) return false;
+      return true;
+    }).sort((a, b) => b.start.localeCompare(a.start));
+  }, [db.installments, fUser, fPlat, fStatus]);
+
+  const filteredTotal = filteredInstallments.reduce((sum, installment) => sum + installment.amount, 0);
 
   const openNew = () => { setEdit(null); setUserId(db.users[0]?.id ?? ""); setContent(""); setAmount(""); setStart(""); setEnd(""); setPlatform(""); setOpen(true); };
   const openEdit = (i: Installment) => { setEdit(i); setUserId(i.userId); setContent(i.content); setAmount(String(i.amount)); setStart(i.start); setEnd(i.end); setPlatform(i.platform); setOpen(true); };
@@ -60,7 +74,7 @@ export function Installments() {
           <Button onClick={openNew} className="bg-accent hover:bg-accent/90 text-accent-foreground"><Plus size={16} /> 新增分期</Button>
         </div>
       } />
-      <div className="p-4 rounded-lg border border-border bg-card mb-3 grid md:grid-cols-3 gap-3">
+      <div className="p-4 rounded-lg border border-border bg-card mb-3 grid md:grid-cols-4 gap-3">
         <div className="space-y-1.5"><Label>分期用户</Label>
           <Select value={fUser} onValueChange={setFUser}>
             <SelectTrigger><SelectValue /></SelectTrigger>
@@ -89,6 +103,12 @@ export function Installments() {
             </SelectContent>
           </Select>
         </div>
+        <div className="flex items-end">
+          <div className="w-full p-2.5 rounded-md bg-muted">
+            <div className="text-muted-foreground tracking-[0.2em] uppercase" style={{ fontSize: 12 }}>筛选后合计</div>
+            <div className="num">¥{fmtMoney(filteredTotal)} <span className="text-muted-foreground" style={{ fontSize: 14 }}>· {filteredInstallments.length}笔</span></div>
+          </div>
+        </div>
       </div>
 
       <div className="rounded-lg border border-border bg-card">
@@ -99,17 +119,8 @@ export function Installments() {
           </TableRow></TableHeader>
           <TableBody>
             {(() => {
-              const todayS = new Date().toISOString().slice(0, 10);
-              const filtered = db.installments.filter(i => {
-                if (fUser !== "all" && i.userId !== fUser) return false;
-                if (fPlat !== "all" && i.platform !== fPlat) return false;
-                const act = i.start <= todayS && i.end >= todayS;
-                if (fStatus === "active" && !act) return false;
-                if (fStatus === "ended" && act) return false;
-                return true;
-              }).sort((a, b) => b.start.localeCompare(a.start));
-              if (filtered.length === 0) return <TableRow><TableCell colSpan={8} className="text-center py-10 text-muted-foreground">无记录</TableCell></TableRow>;
-              return filtered.map(i => {
+              if (filteredInstallments.length === 0) return <TableRow><TableCell colSpan={8} className="text-center py-10 text-muted-foreground">无记录</TableCell></TableRow>;
+              return filteredInstallments.map(i => {
               const today = new Date().toISOString().slice(0, 10);
               const active = i.start <= today && i.end >= today;
               return (
