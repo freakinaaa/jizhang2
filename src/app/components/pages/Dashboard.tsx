@@ -4,11 +4,17 @@ import { PageHeader, Stat } from "../PageHeader";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ui/table";
+import { Tabs, TabsList, TabsTrigger } from "../ui/tabs";
+
+function dateKey(date: Date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
 
 export function Dashboard() {
   const { db } = useStore();
   const months = listMonths(12);
   const [month, setMonth] = useState(months[0]);
+  const [trendRange, setTrendRange] = useState<"week" | "months">("week");
   const [moreOpen, setMoreOpen] = useState(false);
 
   const data = useMemo(() => {
@@ -17,9 +23,21 @@ export function Dashboard() {
     const budget = db.budgets.find(b => b.month === month);
     const installs = db.installments.filter(i => i.start.slice(0, 7) <= month && i.end.slice(0, 7) >= month).reduce((s, i) => s + i.amount, 0);
     const repay = db.repayments.filter(r => r.month === month).reduce((s, r) => s + r.items.reduce((a, b) => a + b.amount, 0), 0);
-    const trend = listMonths(6).reverse().map(m => ({
+    const today = new Date();
+    const weekTrend = Array.from({ length: 7 }, (_, index) => {
+      const date = new Date(today.getFullYear(), today.getMonth(), today.getDate() - (6 - index));
+      const key = dateKey(date);
+      return {
+        key,
+        label: key.slice(5),
+        active: index === 6,
+        value: db.records.filter(r => r.date === key).reduce((s, r) => s + r.amount, 0),
+      };
+    });
+    const monthTrend = listMonths(6).reverse().map(m => ({
       key: m,
-      month: m.slice(5),
+      label: m.slice(5),
+      active: m === month,
       value: db.records.filter(r => monthOf(r.date) === m).reduce((s, r) => s + r.amount, 0),
     }));
     const bySub = new Map<string, number>();
@@ -29,13 +47,15 @@ export function Dashboard() {
       return { name: c?.name ?? "未知", main: c?.main ?? "", value: v };
     }).sort((a, b) => b.value - a.value);
     const recent = [...inMonth].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5);
-    return { expense, budget, installs, repay, trend, ranking, recent };
+    return { expense, budget, installs, repay, weekTrend, monthTrend, ranking, recent };
   }, [db, month]);
 
   const budgetTotal = data.budget?.total ?? 0;
   const left = Math.max(0, budgetTotal - data.expense);
   const max = Math.max(...data.ranking.map(r => r.value), 1);
-  const trendMax = Math.max(...data.trend.map(t => t.value), 1);
+  const trend = trendRange === "week" ? data.weekTrend : data.monthTrend;
+  const trendMax = Math.max(...trend.map(t => t.value), 1);
+  const trendTitle = trendRange === "week" ? "近7日支出走势" : "近6月支出走势";
 
   return (
     <div>
@@ -56,23 +76,27 @@ export function Dashboard() {
       <div className="grid lg:grid-cols-[1.4fr_1fr] gap-3 mb-3">
         <div className="p-5 rounded-lg border border-border bg-card">
           <div className="flex items-center justify-between mb-4">
-            <h3>近 6 月支出走势</h3>
-            <span className="tracking-[0.2em] uppercase text-muted-foreground" style={{ fontSize: 12 }}>Trend</span>
+            <h3>支出走势</h3>
+            <Tabs value={trendRange} onValueChange={(value) => setTrendRange(value as "week" | "months")}>
+              <TabsList className="h-8 rounded-md">
+                <TabsTrigger value="week" className="rounded-sm px-3" style={{ fontSize: 12 }}>近7日</TabsTrigger>
+                <TabsTrigger value="months" className="rounded-sm px-3" style={{ fontSize: 12 }}>近6月</TabsTrigger>
+              </TabsList>
+            </Tabs>
           </div>
           <div className="flex items-end gap-3 h-60 pt-2">
-            {data.trend.map((t) => {
+            {trend.map((t) => {
               const h = Math.max(2, (t.value / trendMax) * 100);
-              const active = t.key === month;
               return (
                 <div key={t.key} className="flex-1 flex flex-col items-center gap-2 h-full justify-end group">
                   <div className="num text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" style={{ fontSize: 12 }}>¥{fmtMoney(t.value)}</div>
-                  <div className="w-full rounded-t-md transition-all" style={{ height: `${h}%`, background: active ? "var(--accent)" : "var(--chart-2)" }} />
-                  <div className="text-muted-foreground mono" style={{ fontSize: 12 }}>{t.month}</div>
+                  <div className="w-full rounded-t-md transition-all" style={{ height: `${h}%`, background: t.active ? "var(--accent)" : "var(--chart-2)" }} />
+                  <div className="text-muted-foreground mono" style={{ fontSize: 12 }}>{t.label}</div>
                 </div>
               );
             })}
           </div>
-          <div className="text-muted-foreground mt-2" style={{ fontSize: 13 }}>单位：元 · 最大 ¥{fmtMoney(trendMax)}</div>
+          <div className="text-muted-foreground mt-2" style={{ fontSize: 13 }}>{trendTitle} · 单位：元 · 最大 ¥{fmtMoney(trendMax)}</div>
         </div>
 
         <div className="p-5 rounded-lg border border-border bg-card">
